@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
-import { PlusCircle, MinusCircle, Check } from "lucide-react";
+import { PlusCircle, MinusCircle, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -189,9 +189,18 @@ const AddTransaction = () => {
               />
             </div>
 
-            <Button type="submit" className="w-full h-12 font-semibold text-base gap-2">
-              <Check className="w-4 h-4" />
-              Add {type === "income" ? "Income" : "Expense"}
+            <Button type="submit" disabled={loading} className="w-full h-12 font-semibold text-base gap-2">
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Add {type === "income" ? "Income" : "Expense"}
+                </>
+              )}
             </Button>
           </form>
         </motion.div>
