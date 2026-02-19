@@ -44,6 +44,7 @@ const Analytics = () => {
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
+  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -489,26 +490,59 @@ const Analytics = () => {
             
             <div className="space-y-3">
               {filteredTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 hover:bg-muted/30 px-2 rounded-lg transition-colors">
-                  <div>
-                    <div className="flex items-center gap-2">
+                <div 
+                  key={tx.id} 
+                  onClick={() => setExpandedTxId(expandedTxId === tx.id ? null : tx.id)}
+                  className="flex flex-col py-3 border-b border-border last:border-0 hover:bg-muted/30 px-3 rounded-lg transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        {tx.type === "income" ? (
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+                        )}
                         <p className="text-sm font-medium text-foreground capitalize">{tx.category}</p>
-                         {tx.type === "income" && <span className="w-2 h-2 rounded-full bg-income"></span>}
-                         {tx.type === "expense" && <span className="w-2 h-2 rounded-full bg-expense"></span>}
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground ml-4">
+                        {format(new Date(tx.created_at), "MMM d, yyyy")}
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{new Date(tx.created_at).toLocaleDateString()}</span>
-                        {/* <span>•</span>
-                        <span>{tx.description}</span> */}
-                    </div>
+                    <span className={`text-sm font-bold ${
+                      tx.type === 'income' ? "text-emerald-500" : "text-rose-500"
+                    }`}>
+                      {tx.type === 'income' ? "+" : "-"}${Math.abs(Number(tx.amount)).toFixed(2)}
+                    </span>
                   </div>
-                  <span className={`text-sm font-semibold ${tx.type === 'income' ? "text-income" : "text-expense"}`}>
-                    {tx.type === 'income' ? "+" : "-"}${Math.abs(Number(tx.amount)).toFixed(2)}
-                  </span>
+
+                  {/* Expanded Description Area */}
+                  {expandedTxId === tx.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 ml-4 pt-2 border-t border-border/50 text-sm text-muted-foreground bg-muted/20 p-3 rounded-md">
+                        <span className="font-semibold text-xs uppercase tracking-wider opacity-70 block mb-1">Description</span>
+                        {tx.description ? tx.description : 
+                          <span className="italic opacity-50">No description provided</span>
+                        }
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               ))}
-              {filteredTransactions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No transactions match your filters.</p>}
+              {filteredTransactions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground flex flex-col items-center gap-2">
+                  <Filter className="w-8 h-8 opacity-20" />
+                  <p>No transactions match your filters.</p>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

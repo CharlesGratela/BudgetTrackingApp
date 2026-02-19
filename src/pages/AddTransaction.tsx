@@ -55,7 +55,8 @@ const AddTransaction = () => {
       .insert([
         { 
           amount: parseFloat(amount), 
-          category, 
+          category,
+          description, // Start saving the description
           type,
           user_id: user.id,
           created_at: new Date(date).toISOString()
