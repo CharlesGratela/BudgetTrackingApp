@@ -72,7 +72,7 @@ const Landing = () => {
               Track every dollar, visualize your spending, and build better financial habits — all in one beautifully simple app.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/analytics">
+              <Link to="/login">
                 <Button variant="hero" size="lg" className="text-base px-8 gap-2">
                   Get Started
                   <ArrowRight className="w-4 h-4" />
@@ -141,7 +141,7 @@ const Landing = () => {
             <p className="text-primary-foreground/60 text-lg mb-8 max-w-lg mx-auto">
               Start tracking your budget today. It's free to get started.
             </p>
-            <Link to="/analytics">
+            <Link to="/login">
               <Button variant="hero" size="lg" className="text-base px-8 gap-2">
                 Start Now <ArrowRight className="w-4 h-4" />
               </Button>
