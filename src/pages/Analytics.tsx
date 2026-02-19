@@ -33,8 +33,10 @@ import {
   Legend
 } from 'recharts';
 
+
 const Analytics = () => {
   const navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [transactions, setTransactions] = useState<any[]>([]);
   
   // Filters
@@ -44,20 +46,29 @@ const Analytics = () => {
   const [sortOrder, setSortOrder] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
 
   useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/");
+      }
+    };
     checkUser();
     fetchData();
-  }, []);
+  }, [navigate]);
 
+/*
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/");
     }
   };
+*/
 
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
 
     const { data } = await supabase
       .from('transactions')
@@ -81,7 +92,7 @@ const Analytics = () => {
       .filter(t => t.type === 'income')
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    const salaryPeriods: any[] = [];
+    const salaryPeriods: { id: string; label: string; start: Date; end: Date | null; type: string }[] = [];
     
     if (incomes.length > 0) {
       // Current Period (from latest income to now)
@@ -295,7 +306,7 @@ const Analytics = () => {
                 </Select>
 
                 {/* Type Filter */}
-                <Select value={typeFilter} onValueChange={(val: any) => setTypeFilter(val)}>
+                <Select value={typeFilter} onValueChange={(val: "all" | "income" | "expense") => setTypeFilter(val)}>
                     <SelectTrigger className="w-[130px]">
                         <SelectValue placeholder="Type" />
                     </SelectTrigger>
@@ -322,7 +333,7 @@ const Analytics = () => {
                 </Select>
 
                 {/* Sort Order */}
-                <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
+                <Select value={sortOrder} onValueChange={(val: "date-desc" | "date-asc" | "amount-desc" | "amount-asc") => setSortOrder(val)}>
                      <SelectTrigger className="w-[160px]">
                          <div className="flex items-center gap-2">
                             <ArrowUpDown className="w-3 h-3 text-muted-foreground" />

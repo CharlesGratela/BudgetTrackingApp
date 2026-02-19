@@ -6,10 +6,12 @@ import { supabase } from "@/lib/supabase";
 import { ModeToggle } from "@/components/ModeToggle";
 
 
+import { User } from "@supabase/supabase-js";
+
 const Navbar = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const isLanding = location.pathname === "/";
 
   useEffect(() => {
