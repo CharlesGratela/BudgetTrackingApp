@@ -42,9 +42,7 @@ const Navbar = () => {
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all ${isLanding ? "bg-navy/80 backdrop-blur-xl border-b border-primary/10" : "bg-card/80 backdrop-blur-xl border-b border-border"}`}>
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Wallet className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img src="/icon_transparent.png" alt="BudgetFlow" className="w-8 h-8 rounded-lg object-contain" />
           <span className={`font-heading font-bold text-lg ${isLanding ? "text-primary-foreground" : "text-foreground"}`}>
             BudgetFlow
           </span>
