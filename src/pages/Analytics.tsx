@@ -388,24 +388,33 @@ const Analytics = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             
-            {/* Trend Chart (Grouped Bar) */}
+            {/* Trend Chart (Area) */}
             <div className="bg-card border border-border rounded-xl p-6 shadow-sm col-span-1 lg:col-span-2">
                 <h3 className="text-lg font-heading font-semibold mb-4 text-foreground">Income vs Expense Trend</h3>
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <AreaChart data={dailyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                                </linearGradient>
+                                <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
                             <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                             <Tooltip 
                                 contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)' }}
                                 itemStyle={{ color: 'var(--foreground)' }}
-                                cursor={{fill: 'var(--muted)', opacity: 0.2}}
                             />
+                            <Area type="monotone" dataKey="income" stroke="#10B981" fillOpacity={1} fill="url(#colorIncome)" name="Income" />
+                            <Area type="monotone" dataKey="expense" stroke="#EF4444" fillOpacity={1} fill="url(#colorExpense)" name="Expense" />
                             <Legend />
-                            <Bar dataKey="income" name="Income" fill="#10B981" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="expense" name="Expense" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                        </BarChart>
+                        </AreaChart>
                     </ResponsiveContainer>
                 </div>
             </div>
