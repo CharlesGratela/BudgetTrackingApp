@@ -14,7 +14,7 @@ import {
   SelectSeparator
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Filter, ArrowUpDown, Download, Trash2, Edit2, ChevronDown, AlertCircle } from "lucide-react";
+import { Filter, ArrowUpDown, Download, Trash2, Edit2, ChevronDown, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { TrendingUp, TrendingDown, DollarSign, PiggyBank } from "lucide-react";
@@ -310,7 +310,7 @@ const Analytics = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-20 pb-12">
+    <div className="min-h-screen bg-background pt-20 pb-24 md:pb-12 relative">
       <div className="container mx-auto px-4">
         <div className="flex flex-col gap-6 mb-8">
             <motion.div
@@ -660,6 +660,17 @@ const Analytics = () => {
             </div>
           </motion.div>
         </div>
+      </div>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <div className="md:hidden fixed bottom-6 right-6 z-50">
+        <Button 
+          size="icon" 
+          className="h-14 w-14 rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
+          onClick={() => navigate("/add-transaction")}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
       </div>
     </div>
   );
