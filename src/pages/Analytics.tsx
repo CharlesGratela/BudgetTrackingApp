@@ -14,7 +14,8 @@ import {
   SelectSeparator
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Filter, ArrowUpDown } from "lucide-react";
+import { Filter, ArrowUpDown, Download, Trash2, Edit2, ChevronDown, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 import { TrendingUp, TrendingDown, DollarSign, PiggyBank } from "lucide-react";
 import { 
@@ -45,6 +46,12 @@ const Analytics = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [selectedPeriod, typeFilter, categoryFilter, sortOrder]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -232,6 +239,57 @@ const Analytics = () => {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [filteredTransactions]);
 
+  const insights = useMemo(() => {
+    const expenses = filteredTransactions.filter(t => t.type === 'expense');
+    const categoryTotals = expenses.reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + Number(t.amount);
+      return acc;
+    }, {} as Record<string, number>);
+    
+    let topCategory = "";
+    let topAmount = 0;
+    Object.entries(categoryTotals).forEach(([cat, amt]) => {
+      if (amt > topAmount) {
+        topAmount = amt;
+        topCategory = cat;
+      }
+    });
+
+    return { topCategory, topAmount };
+  }, [filteredTransactions]);
+
+  const exportToCSV = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    const headers = ["Date", "Type", "Category", "Amount", "Description"];
+    const csvData = filteredTransactions.map(t => {
+      return `${format(new Date(t.created_at), "yyyy-MM-dd")},${t.type},${t.category},${t.amount},"${t.description || ''}"`;
+    });
+    const csvContent = [headers.join(","), ...csvData].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `budget_export_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Exported successfully!");
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) {
+      toast.error("Failed to delete transaction");
+    } else {
+      toast.success("Transaction deleted");
+      setTransactions(transactions.filter(t => t.id !== id));
+    }
+  };
+
   const COLORS = ['#FF8042', '#00C49F', '#FFBB28', '#0088FE', '#8884d8', '#82ca9d'];
 
   const summaryCards = [
@@ -275,6 +333,11 @@ const Analytics = () => {
                     <Filter className="w-4 h-4" />
                     Filters:
                 </div>
+
+                <Button variant="outline" size="sm" onClick={exportToCSV} className="hidden md:flex gap-2">
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                </Button>
 
                 {/* Date Period Filter */}
                 <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -351,6 +414,19 @@ const Analytics = () => {
 
             </motion.div>
         </div>
+
+        {insights.topCategory && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-xl flex items-center gap-3"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <p className="text-sm font-medium">
+              💡 Insight: Your biggest expense this period is <span className="font-bold capitalize">{insights.topCategory}</span> at <span className="font-bold">${insights.topAmount.toFixed(2)}</span>.
+            </p>
+          </motion.div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -489,7 +565,7 @@ const Analytics = () => {
             </div>
             
             <div className="space-y-3">
-              {filteredTransactions.map((tx) => (
+              {filteredTransactions.slice(0, visibleCount).map((tx) => (
                 <div 
                   key={tx.id} 
                   onClick={() => setExpandedTxId(expandedTxId === tx.id ? null : tx.id)}
@@ -527,16 +603,54 @@ const Analytics = () => {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-3 ml-4 pt-2 border-t border-border/50 text-sm text-muted-foreground bg-muted/20 p-3 rounded-md">
-                        <span className="font-semibold text-xs uppercase tracking-wider opacity-70 block mb-1">Description</span>
-                        {tx.description ? tx.description : 
-                          <span className="italic opacity-50">No description provided</span>
-                        }
+                      <div className="mt-3 ml-4 pt-2 border-t border-border/50 text-sm text-muted-foreground bg-muted/20 p-3 rounded-md flex justify-between items-start gap-4">
+                        <div>
+                          <span className="font-semibold text-xs uppercase tracking-wider opacity-70 block mb-1">Description</span>
+                          {tx.description ? tx.description : 
+                            <span className="italic opacity-50">No description provided</span>
+                          }
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.info("Edit feature coming soon!");
+                            }}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(tx.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </motion.div>
                   )}
                 </div>
               ))}
+
+              {filteredTransactions.length > visibleCount && (
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-4 text-muted-foreground"
+                  onClick={() => setVisibleCount(prev => prev + 10)}
+                >
+                  <ChevronDown className="w-4 h-4 mr-2" />
+                  Load More
+                </Button>
+              )}
+
               {filteredTransactions.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground flex flex-col items-center gap-2">
                   <Filter className="w-8 h-8 opacity-20" />
