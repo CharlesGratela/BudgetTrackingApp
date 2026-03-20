@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import BudgetGoalsDialog from "@/components/budgets/BudgetGoalsDialog";
 import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
+import RecurringTransactionsDialog from "@/components/recurring/RecurringTransactionsDialog";
+import SavingsGoalsDialog from "@/components/savings/SavingsGoalsDialog";
 import {
   Select,
   SelectContent,
@@ -17,11 +19,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, ArrowUpDown, ChevronDown, Download, Edit2, Filter, Plus, Search, Settings2, Target, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowUpDown, ChevronDown, Download, Edit2, Filter, Plus, Repeat, Search, Settings2, Target, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useBudgetGoals } from "@/hooks/use-budget-goals";
 import { useCategories } from "@/hooks/use-categories";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useRecurringTransactions } from "@/hooks/use-recurring-transactions";
+import { useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useDeleteTransaction, useTransactions } from "@/hooks/use-transactions";
 import {
   buildCategoryData,
@@ -35,6 +39,7 @@ import {
 } from "@/lib/analytics";
 import { buildBudgetProgress, getMonthKey } from "@/lib/planning";
 import { formatCategoryLabel, formatCurrency } from "@/lib/transactions";
+import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import type { TransactionFilters } from "@/types/transactions";
 import { DollarSign, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
 import {
@@ -71,6 +76,8 @@ const Analytics = () => {
   const categoriesQuery = useCategories(user?.id);
   const currentMonthKey = getMonthKey();
   const budgetGoalsQuery = useBudgetGoals(user?.id, currentMonthKey);
+  const recurringTransactionsQuery = useRecurringTransactions(user?.id);
+  const savingsGoalsQuery = useSavingsGoals(user?.id);
   const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>("this-month");
@@ -86,6 +93,8 @@ const Analytics = () => {
   const [visibleCount, setVisibleCount] = useState(10);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
+  const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false);
+  const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false);
 
   useEffect(() => {
     setVisibleCount(10);
@@ -130,6 +139,20 @@ const Analytics = () => {
     () => buildBudgetProgress(budgetGoalsQuery.data ?? [], transactions, currentMonthKey),
     [budgetGoalsQuery.data, transactions, currentMonthKey],
   );
+  const savingsProgress = useMemo(
+    () => buildSavingsProgress(savingsGoalsQuery.data ?? []),
+    [savingsGoalsQuery.data],
+  );
+  const smartAlerts = useMemo(
+    () =>
+      buildSmartAlerts({
+        budgetProgress,
+        recurringTransactions: recurringTransactionsQuery.data ?? [],
+        savingsGoals: savingsProgress,
+        transactions,
+      }),
+    [budgetProgress, recurringTransactionsQuery.data, savingsProgress, transactions],
+  );
   const budgetTotals = useMemo(() => {
     const totalBudget = budgetProgress.reduce((sum, item) => sum + item.monthlyLimit, 0);
     const totalSpent = budgetProgress.reduce((sum, item) => sum + item.spent, 0);
@@ -140,6 +163,10 @@ const Analytics = () => {
       remaining: totalBudget - totalSpent,
     };
   }, [budgetProgress]);
+  const upcomingRecurring = useMemo(
+    () => (recurringTransactionsQuery.data ?? []).filter((item) => item.is_active).slice(0, 4),
+    [recurringTransactionsQuery.data],
+  );
 
   const exportToCSV = () => {
     if (filteredTransactions.length === 0) {
@@ -249,6 +276,14 @@ const Analytics = () => {
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
                   <Settings2 className="w-4 h-4" />
                   Manage Categories
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsRecurringDialogOpen(true)}>
+                  <Repeat className="w-4 h-4" />
+                  Recurring
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsSavingsDialogOpen(true)}>
+                  <Wallet className="w-4 h-4" />
+                  Savings Goals
                 </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsBudgetDialogOpen(true)}>
                   <Target className="w-4 h-4" />
@@ -415,6 +450,101 @@ const Analytics = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold text-foreground">Smart Alerts</h3>
+              <AlertCircle className="w-4 h-4 text-primary" />
+            </div>
+            <div className="space-y-3">
+              {smartAlerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className={`rounded-xl border px-4 py-3 ${
+                    alert.tone === "warning"
+                      ? "border-rose-200 bg-rose-50/60 dark:border-rose-900/50 dark:bg-rose-950/20"
+                      : alert.tone === "success"
+                        ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+                        : "border-primary/20 bg-primary/5"
+                  }`}
+                >
+                  <div className="text-sm font-medium text-foreground">{alert.title}</div>
+                  <div className="text-sm text-muted-foreground">{alert.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold text-foreground">Upcoming Recurring</h3>
+              <Button variant="ghost" size="sm" onClick={() => setIsRecurringDialogOpen(true)}>
+                Manage
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {upcomingRecurring.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground text-center">
+                  No recurring transactions yet.
+                </div>
+              ) : (
+                upcomingRecurring.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-border px-4 py-3 bg-muted/20">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-foreground">{item.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {safeCategoryLabel(item.category)} • {item.frequency}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`font-semibold ${item.type === "income" ? "text-emerald-500" : "text-rose-500"}`}>
+                          {item.type === "income" ? "+" : "-"}
+                          {formatCurrency(item.amount)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(item.next_occurrence), "MMM d")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold text-foreground">Savings Goals</h3>
+              <Button variant="ghost" size="sm" onClick={() => setIsSavingsDialogOpen(true)}>
+                Manage
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {savingsProgress.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground text-center">
+                  No savings goals yet.
+                </div>
+              ) : (
+                savingsProgress.slice(0, 3).map((goal) => (
+                  <div key={goal.id} className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-foreground">{goal.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatCurrency(goal.currentAmount)} of {formatCurrency(goal.targetAmount)}
+                        </div>
+                      </div>
+                      <div className="text-sm font-semibold text-muted-foreground">{goal.progress.toFixed(0)}%</div>
+                    </div>
+                    <Progress value={goal.progress} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-5">
               <div>
@@ -485,6 +615,14 @@ const Analytics = () => {
               <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
                 <Settings2 className="w-4 h-4" />
                 Customize Categories
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsRecurringDialogOpen(true)}>
+                <Repeat className="w-4 h-4" />
+                Manage Recurring
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsSavingsDialogOpen(true)}>
+                <Wallet className="w-4 h-4" />
+                Track Savings Goals
               </Button>
               <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsBudgetDialogOpen(true)}>
                 <Target className="w-4 h-4" />
@@ -733,6 +871,16 @@ const Analytics = () => {
         userId={user?.id}
         monthKey={currentMonthKey}
         categories={expenseCategories}
+      />
+      <RecurringTransactionsDialog
+        open={isRecurringDialogOpen}
+        onOpenChange={setIsRecurringDialogOpen}
+        userId={user?.id}
+      />
+      <SavingsGoalsDialog
+        open={isSavingsDialogOpen}
+        onOpenChange={setIsSavingsDialogOpen}
+        userId={user?.id}
       />
     </div>
   );
