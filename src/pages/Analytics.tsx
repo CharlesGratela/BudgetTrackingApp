@@ -34,7 +34,7 @@ import {
   getUniqueCategories,
 } from "@/lib/analytics";
 import { buildBudgetProgress, getMonthKey } from "@/lib/planning";
-import { formatCurrency } from "@/lib/transactions";
+import { formatCategoryLabel, formatCurrency } from "@/lib/transactions";
 import type { TransactionFilters } from "@/types/transactions";
 import { DollarSign, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
 import {
@@ -54,6 +54,14 @@ import {
 } from "recharts";
 
 const COLORS = ["#FF8042", "#00C49F", "#FFBB28", "#0088FE", "#8884d8", "#82ca9d"];
+
+const safeCategoryLabel = (value?: string | null) => {
+  try {
+    return formatCategoryLabel(value);
+  } catch {
+    return "Uncategorized";
+  }
+};
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -316,7 +324,7 @@ const Analytics = () => {
                   <SelectItem value="all">All Categories</SelectItem>
                   {allCategoryOptions.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {formatCategoryLabel(category)}
+                      {safeCategoryLabel(category)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -376,7 +384,7 @@ const Analytics = () => {
             <AlertCircle className="w-5 h-5 shrink-0" />
             <p className="text-sm font-medium">
               Insight: Your biggest expense this period is{" "}
-              <span className="font-bold">{formatCategoryLabel(insights.topCategory)}</span> at{" "}
+              <span className="font-bold">{safeCategoryLabel(insights.topCategory)}</span> at{" "}
               <span className="font-bold">{formatCurrency(insights.topAmount)}</span>.
             </p>
           </motion.div>
@@ -450,7 +458,7 @@ const Analytics = () => {
                     <div key={item.category} className="space-y-2">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <div className="font-medium text-foreground">{formatCategoryLabel(item.category)}</div>
+                          <div className="font-medium text-foreground">{safeCategoryLabel(item.category)}</div>
                           <div className="text-sm text-muted-foreground">
                             {formatCurrency(item.spent)} spent of {formatCurrency(item.monthlyLimit)}
                           </div>
@@ -625,7 +633,7 @@ const Analytics = () => {
                         ) : (
                           <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
                         )}
-                        <p className="text-sm font-medium text-foreground">{formatCategoryLabel(transaction.category)}</p>
+                        <p className="text-sm font-medium text-foreground">{safeCategoryLabel(transaction.category)}</p>
                       </div>
 
                       <div className="text-xs text-muted-foreground ml-4">

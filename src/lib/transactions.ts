@@ -43,9 +43,19 @@ export const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
 
 export const normalizeCategoryName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 
-export const formatCategoryLabel = (value: string) =>
-  value
+export const formatCategoryLabel = (value?: string | null) => {
+  if (!value || typeof value !== "string") {
+    return "Uncategorized";
+  }
+
+  const normalizedValue = value.trim();
+  if (!normalizedValue) {
+    return "Uncategorized";
+  }
+
+  return normalizedValue
     .split(" ")
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
+};
