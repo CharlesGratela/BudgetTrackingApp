@@ -6,8 +6,8 @@ import type {
 } from "@/types/transactions";
 
 export const DEFAULT_TRANSACTION_CATEGORIES: Record<TransactionType, string[]> = {
-  expense: ["Housing", "Food", "Transport", "Entertainment", "Utilities", "Shopping", "Health", "Other"],
-  income: ["Salary", "Freelance", "Investments", "Gifts", "Other"],
+  expense: ["housing", "food", "transport", "entertainment", "utilities", "shopping", "health", "other"],
+  income: ["salary", "freelance", "investments", "gifts", "other"],
 };
 
 type TransactionRow = Omit<Transaction, "amount"> & {
@@ -40,3 +40,12 @@ export const buildTransactionPayload = (
 });
 
 export const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+
+export const normalizeCategoryName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+
+export const formatCategoryLabel = (value: string) =>
+  value
+    .split(" ")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");

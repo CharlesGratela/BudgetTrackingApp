@@ -50,7 +50,7 @@ export const filterTransactions = (
   periods: SalaryPeriod[],
   now = new Date(),
 ) => {
-  const { selectedPeriod, typeFilter, categoryFilter, sortOrder } = filters;
+  const { selectedPeriod, typeFilter, categoryFilter, sortOrder, searchQuery, minAmount, maxAmount, customStartDate, customEndDate } = filters;
   let filtered = [...transactions];
 
   if (selectedPeriod === "this-month") {
@@ -64,6 +64,22 @@ export const filterTransactions = (
   } else if (selectedPeriod === "this-year") {
     const startOfThisYear = startOfYear(now);
     filtered = filtered.filter((transaction) => isAfter(new Date(transaction.created_at), startOfThisYear));
+  } else if (selectedPeriod === "custom") {
+    filtered = filtered.filter((transaction) => {
+      const transactionDate = new Date(transaction.created_at);
+      const startDate = customStartDate ? new Date(`${customStartDate}T00:00:00`) : null;
+      const endDate = customEndDate ? new Date(`${customEndDate}T23:59:59`) : null;
+
+      if (startDate && transactionDate < startDate) {
+        return false;
+      }
+
+      if (endDate && transactionDate > endDate) {
+        return false;
+      }
+
+      return true;
+    });
   } else if (selectedPeriod === "current-salary" || selectedPeriod.startsWith("salary-")) {
     const period = periods.find((item) => item.id === selectedPeriod);
     if (period) {
@@ -83,6 +99,32 @@ export const filterTransactions = (
 
   if (categoryFilter !== "all") {
     filtered = filtered.filter((transaction) => transaction.category === categoryFilter);
+  }
+
+  if (searchQuery.trim()) {
+    const query = searchQuery.trim().toLowerCase();
+    filtered = filtered.filter((transaction) => {
+      const description = transaction.description?.toLowerCase() ?? "";
+      return (
+        transaction.category.toLowerCase().includes(query) ||
+        transaction.type.toLowerCase().includes(query) ||
+        description.includes(query)
+      );
+    });
+  }
+
+  if (minAmount.trim()) {
+    const minimum = Number(minAmount);
+    if (Number.isFinite(minimum)) {
+      filtered = filtered.filter((transaction) => transaction.amount >= minimum);
+    }
+  }
+
+  if (maxAmount.trim()) {
+    const maximum = Number(maxAmount);
+    if (Number.isFinite(maximum)) {
+      filtered = filtered.filter((transaction) => transaction.amount <= maximum);
+    }
   }
 
   filtered.sort((a, b) => {

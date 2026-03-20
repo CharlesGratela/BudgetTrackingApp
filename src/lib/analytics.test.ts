@@ -65,6 +65,11 @@ describe("analytics helpers", () => {
         typeFilter: "all",
         categoryFilter: "all",
         sortOrder: "date-desc",
+        searchQuery: "",
+        minAmount: "",
+        maxAmount: "",
+        customStartDate: "",
+        customEndDate: "",
       },
       periods,
       new Date("2026-03-20T00:00:00.000Z"),
@@ -91,5 +96,28 @@ describe("analytics helpers", () => {
       topCategory: "food",
       topAmount: 120,
     });
+  });
+
+  it("supports advanced text and custom date filters", () => {
+    const periods = getSalaryPeriods(transactions);
+    const filtered = filterTransactions(
+      transactions,
+      {
+        selectedPeriod: "custom",
+        typeFilter: "expense",
+        categoryFilter: "all",
+        sortOrder: "date-desc",
+        searchQuery: "grocer",
+        minAmount: "100",
+        maxAmount: "150",
+        customStartDate: "2026-03-01",
+        customEndDate: "2026-03-31",
+      },
+      periods,
+      new Date("2026-03-20T00:00:00.000Z"),
+    );
+
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].category).toBe("food");
   });
 });

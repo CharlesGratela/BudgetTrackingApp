@@ -28,6 +28,7 @@ const AddTransaction = () => {
       description="Record a new expense or income."
       submitLabel="Save Transaction"
       isSubmitting={addTransaction.isPending}
+      userId={user?.id}
       onSubmit={async (values) => {
         if (!user) {
           toast.error("Please sign in to add transactions.");

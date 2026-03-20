@@ -32,6 +32,11 @@ export interface TransactionFilters {
   typeFilter: "all" | TransactionType;
   categoryFilter: string;
   sortOrder: "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+  searchQuery: string;
+  minAmount: string;
+  maxAmount: string;
+  customStartDate: string;
+  customEndDate: string;
 }
 
 export interface SalaryPeriod {

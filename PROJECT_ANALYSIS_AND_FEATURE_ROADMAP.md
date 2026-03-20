@@ -298,7 +298,9 @@ After that, the highest-value strategic feature is:
 
 ### In Progress
 
-- None yet
+- Budget goals by category
+- Custom categories
+- Advanced search and filters
 
 ### Completed
 
@@ -310,3 +312,4 @@ After that, the highest-value strategic feature is:
 - Edit transaction flow implemented
 - Analytics refactored to use shared transaction utilities and query hooks
 - Analytics helper tests added
+- Phase 2 Supabase setup SQL added

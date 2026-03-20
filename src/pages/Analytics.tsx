@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import BudgetGoalsDialog from "@/components/budgets/BudgetGoalsDialog";
+import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
 import {
   Select,
   SelectContent,
@@ -13,8 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ArrowUpDown, ChevronDown, Download, Edit2, Filter, Plus, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { AlertCircle, ArrowUpDown, ChevronDown, Download, Edit2, Filter, Plus, Search, Settings2, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useBudgetGoals } from "@/hooks/use-budget-goals";
+import { useCategories } from "@/hooks/use-categories";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useDeleteTransaction, useTransactions } from "@/hooks/use-transactions";
 import {
@@ -27,6 +33,7 @@ import {
   getSalaryPeriods,
   getUniqueCategories,
 } from "@/lib/analytics";
+import { buildBudgetProgress, getMonthKey } from "@/lib/planning";
 import { formatCurrency } from "@/lib/transactions";
 import type { TransactionFilters } from "@/types/transactions";
 import { DollarSign, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
@@ -53,20 +60,42 @@ const Analytics = () => {
   const { user, isCheckingAuth } = useRequireAuth("/");
   const transactionsQuery = useTransactions(user?.id);
   const deleteTransaction = useDeleteTransaction(user?.id);
+  const categoriesQuery = useCategories(user?.id);
+  const currentMonthKey = getMonthKey();
+  const budgetGoalsQuery = useBudgetGoals(user?.id, currentMonthKey);
   const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>("this-month");
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
 
   useEffect(() => {
     setVisibleCount(10);
-  }, [selectedPeriod, typeFilter, categoryFilter, sortOrder]);
+  }, [selectedPeriod, typeFilter, categoryFilter, sortOrder, searchQuery, minAmount, maxAmount, customStartDate, customEndDate]);
 
   const uniqueCategories = useMemo(() => getUniqueCategories(transactions), [transactions]);
+  const allCategoryOptions = useMemo(() => {
+    const categoryNames = new Set(uniqueCategories);
+    (categoriesQuery.data ?? []).forEach((category) => categoryNames.add(category.name));
+    return Array.from(categoryNames).sort();
+  }, [categoriesQuery.data, uniqueCategories]);
+  const expenseCategories = useMemo(
+    () =>
+      (categoriesQuery.data ?? [])
+        .filter((category) => category.type === "expense")
+        .map((category) => category.name),
+    [categoriesQuery.data],
+  );
   const periods = useMemo(() => getSalaryPeriods(transactions), [transactions]);
 
   const filteredTransactions = useMemo(() => {
@@ -75,15 +104,34 @@ const Analytics = () => {
       typeFilter,
       categoryFilter,
       sortOrder,
+      searchQuery,
+      minAmount,
+      maxAmount,
+      customStartDate,
+      customEndDate,
     };
 
     return filterTransactions(transactions, filters, periods);
-  }, [transactions, selectedPeriod, typeFilter, categoryFilter, sortOrder, periods]);
+  }, [transactions, selectedPeriod, typeFilter, categoryFilter, sortOrder, searchQuery, minAmount, maxAmount, customStartDate, customEndDate, periods]);
 
   const summary = useMemo(() => buildSummary(filteredTransactions), [filteredTransactions]);
   const dailyData = useMemo(() => buildDailyData(filteredTransactions), [filteredTransactions]);
   const categoryData = useMemo(() => buildCategoryData(filteredTransactions), [filteredTransactions]);
   const insights = useMemo(() => buildInsights(filteredTransactions), [filteredTransactions]);
+  const budgetProgress = useMemo(
+    () => buildBudgetProgress(budgetGoalsQuery.data ?? [], transactions, currentMonthKey),
+    [budgetGoalsQuery.data, transactions, currentMonthKey],
+  );
+  const budgetTotals = useMemo(() => {
+    const totalBudget = budgetProgress.reduce((sum, item) => sum + item.monthlyLimit, 0);
+    const totalSpent = budgetProgress.reduce((sum, item) => sum + item.spent, 0);
+
+    return {
+      totalBudget,
+      totalSpent,
+      remaining: totalBudget - totalSpent,
+    };
+  }, [budgetProgress]);
 
   const exportToCSV = () => {
     if (filteredTransactions.length === 0) {
@@ -128,6 +176,14 @@ const Analytics = () => {
     }
   };
 
+  const resetAdvancedFilters = () => {
+    setSearchQuery("");
+    setMinAmount("");
+    setMaxAmount("");
+    setCustomStartDate("");
+    setCustomEndDate("");
+  };
+
   const summaryCards = [
     { label: "Total Balance", value: formatCurrency(summary.total), icon: DollarSign, trend: "", positive: summary.total >= 0 },
     { label: "Income", value: formatCurrency(summary.income), icon: TrendingUp, trend: "", positive: true },
@@ -141,6 +197,7 @@ const Analytics = () => {
     if (selectedPeriod === "last-30-days") return "the last 30 days";
     if (selectedPeriod === "this-year") return "this year";
     if (selectedPeriod === "all") return "all time";
+    if (selectedPeriod === "custom") return "your custom date range";
     if (selectedPeriod.startsWith("salary-") || selectedPeriod === "current-salary") return "this salary period";
     return "this period";
   };
@@ -175,97 +232,138 @@ const Analytics = () => {
       <div className="container mx-auto px-4">
         <div className="flex flex-col gap-6 mb-8">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-1">Dashboard</h1>
-            <p className="text-muted-foreground">Your financial overview at a glance.</p>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-1">Dashboard</h1>
+                <p className="text-muted-foreground">Your financial overview at a glance.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
+                  <Settings2 className="w-4 h-4" />
+                  Manage Categories
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsBudgetDialogOpen(true)}>
+                  <Target className="w-4 h-4" />
+                  Budget Goals
+                </Button>
+              </div>
+            </div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="flex flex-wrap items-center gap-3 bg-card border border-border p-4 rounded-xl shadow-sm"
+            className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4"
           >
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mr-auto">
-              <Filter className="w-4 h-4" />
-              Filters:
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mr-auto">
+                <Filter className="w-4 h-4" />
+                Filters:
+              </div>
+
+              <Button variant="outline" size="sm" onClick={exportToCSV} className="hidden md:flex gap-2">
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger className="w-[180px] md:w-[240px]">
+                  <SelectValue placeholder="Select Period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Calendar Presets</SelectLabel>
+                    <SelectItem value="this-month">This Month</SelectItem>
+                    <SelectItem value="last-month">Last Month</SelectItem>
+                    <SelectItem value="last-30-days">Last 30 Days</SelectItem>
+                    <SelectItem value="this-year">This Year</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
+                  </SelectGroup>
+                  {periods.length > 0 && (
+                    <>
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Salary Periods</SelectLabel>
+                        {periods.map((period) => (
+                          <SelectItem key={period.id} value={period.id}>
+                            {period.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Select value={typeFilter} onValueChange={(value: "all" | "income" | "expense") => setTypeFilter(value)}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="income">Income Only</SelectItem>
+                  <SelectItem value="expense">Expenses Only</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[170px]">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {allCategoryOptions.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {formatCategoryLabel(category)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={sortOrder}
+                onValueChange={(value: "date-desc" | "date-asc" | "amount-desc" | "amount-asc") => setSortOrder(value)}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+                    <SelectValue placeholder="Sort" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-desc">Newest First</SelectItem>
+                  <SelectItem value="date-asc">Oldest First</SelectItem>
+                  <SelectItem value="amount-desc">Amount: High to Low</SelectItem>
+                  <SelectItem value="amount-asc">Amount: Low to High</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <Button variant="outline" size="sm" onClick={exportToCSV} className="hidden md:flex gap-2">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+              <div className="xl:col-span-2 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search description, category, or type"
+                  className="pl-10"
+                />
+              </div>
+              <Input type="number" min="0" step="0.01" placeholder="Min amount" value={minAmount} onChange={(event) => setMinAmount(event.target.value)} />
+              <Input type="number" min="0" step="0.01" placeholder="Max amount" value={maxAmount} onChange={(event) => setMaxAmount(event.target.value)} />
+              <Button type="button" variant="ghost" onClick={resetAdvancedFilters}>
+                Clear Advanced
+              </Button>
+            </div>
 
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-[180px] md:w-[240px]">
-                <SelectValue placeholder="Select Period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Calendar Presets</SelectLabel>
-                  <SelectItem value="this-month">This Month</SelectItem>
-                  <SelectItem value="last-month">Last Month</SelectItem>
-                  <SelectItem value="last-30-days">Last 30 Days</SelectItem>
-                  <SelectItem value="this-year">This Year</SelectItem>
-                  <SelectItem value="all">All Time</SelectItem>
-                </SelectGroup>
-                {periods.length > 0 && (
-                  <>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Salary Periods</SelectLabel>
-                      {periods.map((period) => (
-                        <SelectItem key={period.id} value={period.id}>
-                          {period.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-
-            <Select value={typeFilter} onValueChange={(value: "all" | "income" | "expense") => setTypeFilter(value)}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="income">Income Only</SelectItem>
-                <SelectItem value="expense">Expenses Only</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {uniqueCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    <span className="capitalize">{category}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={sortOrder}
-              onValueChange={(value: "date-desc" | "date-asc" | "amount-desc" | "amount-asc") => setSortOrder(value)}
-            >
-              <SelectTrigger className="w-[160px]">
-                <div className="flex items-center gap-2">
-                  <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
-                  <SelectValue placeholder="Sort" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date-desc">Newest First</SelectItem>
-                <SelectItem value="date-asc">Oldest First</SelectItem>
-                <SelectItem value="amount-desc">Amount: High to Low</SelectItem>
-                <SelectItem value="amount-asc">Amount: Low to High</SelectItem>
-              </SelectContent>
-            </Select>
+            {selectedPeriod === "custom" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input type="date" value={customStartDate} onChange={(event) => setCustomStartDate(event.target.value)} />
+                <Input type="date" value={customEndDate} onChange={(event) => setCustomEndDate(event.target.value)} />
+              </div>
+            )}
           </motion.div>
         </div>
 
@@ -278,7 +376,7 @@ const Analytics = () => {
             <AlertCircle className="w-5 h-5 shrink-0" />
             <p className="text-sm font-medium">
               Insight: Your biggest expense this period is{" "}
-              <span className="font-bold capitalize">{insights.topCategory}</span> at{" "}
+              <span className="font-bold">{formatCategoryLabel(insights.topCategory)}</span> at{" "}
               <span className="font-bold">{formatCurrency(insights.topAmount)}</span>.
             </p>
           </motion.div>
@@ -306,6 +404,92 @@ const Analytics = () => {
               </span>
             </motion.div>
           ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h3 className="text-lg font-heading font-semibold text-foreground">Monthly Budget Snapshot</h3>
+                <p className="text-sm text-muted-foreground">Tracking goals for {format(new Date(), "MMMM yyyy")}.</p>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsBudgetDialogOpen(true)}>
+                <Target className="w-4 h-4" />
+                Edit Goals
+              </Button>
+            </div>
+
+            {budgetProgress.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                <p className="text-muted-foreground mb-3">No monthly budget goals set yet.</p>
+                <Button variant="outline" onClick={() => setIsBudgetDialogOpen(true)}>
+                  Create Budget Goals
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-xl bg-muted/30 px-4 py-3">
+                    <div className="text-sm text-muted-foreground">Budgeted</div>
+                    <div className="text-xl font-heading font-bold text-foreground">{formatCurrency(budgetTotals.totalBudget)}</div>
+                  </div>
+                  <div className="rounded-xl bg-muted/30 px-4 py-3">
+                    <div className="text-sm text-muted-foreground">Spent</div>
+                    <div className="text-xl font-heading font-bold text-foreground">{formatCurrency(budgetTotals.totalSpent)}</div>
+                  </div>
+                  <div className="rounded-xl bg-muted/30 px-4 py-3">
+                    <div className="text-sm text-muted-foreground">Remaining</div>
+                    <div className={`text-xl font-heading font-bold ${budgetTotals.remaining >= 0 ? "text-foreground" : "text-rose-500"}`}>
+                      {formatCurrency(budgetTotals.remaining)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {budgetProgress.map((item) => (
+                    <div key={item.category} className="space-y-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <div className="font-medium text-foreground">{formatCategoryLabel(item.category)}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatCurrency(item.spent)} spent of {formatCurrency(item.monthlyLimit)}
+                          </div>
+                        </div>
+                        <div className={`text-sm font-semibold ${item.isOverBudget ? "text-rose-500" : "text-muted-foreground"}`}>
+                          {item.isOverBudget ? `${formatCurrency(Math.abs(item.remaining))} over` : `${formatCurrency(item.remaining)} left`}
+                        </div>
+                      </div>
+                      <Progress value={item.progress} className={item.isOverBudget ? "[&>div]:bg-rose-500" : "[&>div]:bg-primary"} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+            <h3 className="text-lg font-heading font-semibold text-foreground mb-4">Overview Actions</h3>
+            <div className="space-y-3">
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/add-transaction")}>
+                <Plus className="w-4 h-4" />
+                Add Transaction
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
+                <Settings2 className="w-4 h-4" />
+                Customize Categories
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsBudgetDialogOpen(true)}>
+                <Target className="w-4 h-4" />
+                Update Budget Goals
+              </Button>
+              <div className="rounded-xl bg-primary/5 border border-primary/10 p-4">
+                <div className="text-sm font-medium text-foreground mb-1">Phase 2 unlocked</div>
+                <p className="text-sm text-muted-foreground">
+                  Custom categories, budget goals, and advanced filters are now part of your dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {filteredTransactions.length === 0 ? (
@@ -441,7 +625,7 @@ const Analytics = () => {
                         ) : (
                           <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
                         )}
-                        <p className="text-sm font-medium text-foreground capitalize">{transaction.category}</p>
+                        <p className="text-sm font-medium text-foreground">{formatCategoryLabel(transaction.category)}</p>
                       </div>
 
                       <div className="text-xs text-muted-foreground ml-4">
@@ -529,6 +713,19 @@ const Analytics = () => {
           <Plus className="h-6 w-6" />
         </Button>
       </div>
+
+      <CategoryManagerDialog
+        open={isCategoryDialogOpen}
+        onOpenChange={setIsCategoryDialogOpen}
+        userId={user?.id}
+      />
+      <BudgetGoalsDialog
+        open={isBudgetDialogOpen}
+        onOpenChange={setIsBudgetDialogOpen}
+        userId={user?.id}
+        monthKey={currentMonthKey}
+        categories={expenseCategories}
+      />
     </div>
   );
 };

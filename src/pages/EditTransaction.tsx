@@ -43,6 +43,7 @@ const EditTransaction = () => {
       description="Update an existing income or expense entry."
       submitLabel={`Save ${transactionQuery.data.type === "income" ? "Income" : "Expense"}`}
       isSubmitting={updateTransaction.isPending}
+      userId={user?.id}
       initialValues={transactionToFormValues(transactionQuery.data)}
       onSubmit={async (values) => {
         if (!user) {
