@@ -42,7 +42,6 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero */}
       <section
         className="relative min-h-screen flex items-center justify-center overflow-hidden"
         style={{ background: "var(--gradient-hero)" }}
@@ -69,7 +68,8 @@ const Landing = () => {
               <span className="text-primary">crystal clear.</span>
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/60 max-w-2xl mx-auto mb-10">
-              Track every dollar, visualize your spending, and build better financial habits — all in one beautifully simple app.
+              Track every dollar, visualize your spending, and build better financial habits, all in one beautifully
+              simple app.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/login">
@@ -88,7 +88,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Features */}
       <section className="py-24 bg-background">
         <div className="container mx-auto px-4">
           <motion.div
@@ -98,22 +97,20 @@ const Landing = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Everything you need
-            </h2>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">Everything you need</h2>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">
               Powerful features wrapped in a simple interface.
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, i) => (
+            {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="group p-6 rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:shadow-[var(--shadow-elevated)]"
               >
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
@@ -127,14 +124,9 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-20" style={{ background: "var(--gradient-hero)" }}>
         <div className="container mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <h2 className="font-heading text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
               Ready to take control?
             </h2>
@@ -150,10 +142,9 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-8 bg-background border-t border-border">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © 2026 BudgetFlow. All rights reserved.
+          Copyright 2026 BudgetFlow. All rights reserved.
         </div>
       </footer>
     </div>

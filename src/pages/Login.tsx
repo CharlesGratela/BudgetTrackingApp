@@ -35,7 +35,7 @@ const Login = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Check your email for the login link!");
+        toast.success("Check your email to confirm your account.");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -52,7 +52,6 @@ const Login = () => {
     }
     setLoading(false);
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background pt-16 px-4">
@@ -82,10 +81,10 @@ const Login = () => {
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  placeholder="John Doe" 
-                  className="h-11" 
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  className="h-11"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                 />
@@ -95,11 +94,11 @@ const Login = () => {
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="you@example.com" 
-                  className="h-11 pl-10" 
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  className="h-11 pl-10"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -110,11 +109,11 @@ const Login = () => {
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className="h-11 pl-10" 
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="h-11 pl-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -122,7 +121,7 @@ const Login = () => {
               </div>
             </div>
             <Button className="w-full h-11 font-semibold" type="submit" disabled={loading}>
-              {loading ? "Loading..." : (isSignUp ? "Create Account" : "Sign In")}
+              {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
 
@@ -131,6 +130,7 @@ const Login = () => {
               {isSignUp ? "Already have an account?" : "Don't have an account?"}
             </span>{" "}
             <button
+              type="button"
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-primary font-medium hover:underline"
             >
