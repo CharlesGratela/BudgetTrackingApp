@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { getUserDefaultLandingPath } from "@/hooks/use-user-preferences";
 import { ArrowRight, BarChart3, Shield, Zap, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -35,7 +36,7 @@ const Landing = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        getUserDefaultLandingPath(session.user.id).then((path) => navigate(path));
       }
     });
   }, [navigate]);

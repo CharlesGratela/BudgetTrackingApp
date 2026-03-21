@@ -37,7 +37,7 @@ import {
   getSalaryPeriods,
   getUniqueCategories,
 } from "@/lib/analytics";
-import { buildBudgetProgress, getMonthKey } from "@/lib/planning";
+import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
 import { formatCategoryLabel, formatCurrency } from "@/lib/transactions";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import type { TransactionFilters } from "@/types/transactions";
@@ -75,7 +75,9 @@ const Analytics = () => {
   const deleteTransaction = useDeleteTransaction(user?.id);
   const categoriesQuery = useCategories(user?.id);
   const currentMonthKey = getMonthKey();
+  const previousMonthKey = getPreviousMonthKey(currentMonthKey);
   const budgetGoalsQuery = useBudgetGoals(user?.id, currentMonthKey);
+  const previousBudgetGoalsQuery = useBudgetGoals(user?.id, previousMonthKey);
   const recurringTransactionsQuery = useRecurringTransactions(user?.id);
   const savingsGoalsQuery = useSavingsGoals(user?.id);
   const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
@@ -136,8 +138,8 @@ const Analytics = () => {
   const categoryData = useMemo(() => buildCategoryData(filteredTransactions), [filteredTransactions]);
   const insights = useMemo(() => buildInsights(filteredTransactions), [filteredTransactions]);
   const budgetProgress = useMemo(
-    () => buildBudgetProgress(budgetGoalsQuery.data ?? [], transactions, currentMonthKey),
-    [budgetGoalsQuery.data, transactions, currentMonthKey],
+    () => buildBudgetProgress(budgetGoalsQuery.data ?? [], transactions, currentMonthKey, previousBudgetGoalsQuery.data ?? []),
+    [budgetGoalsQuery.data, previousBudgetGoalsQuery.data, transactions, currentMonthKey],
   );
   const savingsProgress = useMemo(
     () => buildSavingsProgress(savingsGoalsQuery.data ?? []),

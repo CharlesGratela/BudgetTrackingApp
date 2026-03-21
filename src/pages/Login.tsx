@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wallet, Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
+import { getUserDefaultLandingPath } from "@/hooks/use-user-preferences";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -47,7 +48,10 @@ const Login = () => {
         toast.error(error.message);
       } else {
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        navigate(await getUserDefaultLandingPath(user?.id));
       }
     }
     setLoading(false);

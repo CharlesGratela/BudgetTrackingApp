@@ -1,8 +1,10 @@
 import { addMonths, addWeeks, differenceInCalendarDays, format } from "date-fns";
+import { DEFAULT_USER_PREFERENCES, formatMoneyWithPreferences } from "@/lib/preferences";
 import { isMissingRelationError } from "@/lib/planning";
 import { formatCategoryLabel } from "@/lib/transactions";
 import type { BudgetProgressItem } from "@/types/planning";
 import type { RecurringFrequency, RecurringTransaction, SavingsGoal, SavingsGoalProgress, SmartAlert } from "@/types/phase3";
+import type { UserPreferences } from "@/types/preferences";
 import type { Transaction } from "@/types/transactions";
 
 type NumericLike = number | string;
@@ -62,52 +64,63 @@ export const buildSmartAlerts = ({
   recurringTransactions,
   savingsGoals,
   transactions,
+  preferences = DEFAULT_USER_PREFERENCES,
   now = new Date(),
 }: {
   budgetProgress: BudgetProgressItem[];
   recurringTransactions: RecurringTransaction[];
   savingsGoals: SavingsGoalProgress[];
   transactions: Transaction[];
+  preferences?: Pick<
+    UserPreferences,
+    "preferred_currency" | "locale" | "budget_alerts_enabled" | "recurring_alerts_enabled" | "savings_alerts_enabled"
+  >;
   now?: Date;
 }): SmartAlert[] => {
   const alerts: SmartAlert[] = [];
 
-  budgetProgress
-    .filter((item) => item.isOverBudget)
-    .slice(0, 2)
-    .forEach((item) => {
-      alerts.push({
-        id: `budget-${item.category}`,
-        tone: "warning",
-        title: `${formatCategoryLabel(item.category)} is over budget`,
-        description: `You are ${Math.abs(item.remaining).toFixed(2)} over your monthly limit.`,
+  if (preferences.budget_alerts_enabled) {
+    budgetProgress
+      .filter((item) => item.isOverBudget)
+      .slice(0, 2)
+      .forEach((item) => {
+        alerts.push({
+          id: `budget-${item.category}`,
+          tone: "warning",
+          title: `${formatCategoryLabel(item.category)} is over budget`,
+          description: `You are ${formatMoneyWithPreferences(Math.abs(item.remaining), preferences)} over your monthly limit.`,
+        });
       });
-    });
+  }
 
-  recurringTransactions
-    .filter((item) => item.is_active)
-    .filter((item) => differenceInCalendarDays(new Date(item.next_occurrence), now) <= 7)
-    .slice(0, 2)
-    .forEach((item) => {
-      alerts.push({
-        id: `recurring-${item.id}`,
-        tone: "info",
-        title: `${item.title} is due soon`,
-        description: `${format(new Date(item.next_occurrence), "MMM d")} | ${item.type === "expense" ? "-" : "+"}$${item.amount.toFixed(2)}`,
+  if (preferences.recurring_alerts_enabled) {
+    recurringTransactions
+      .filter((item) => item.is_active)
+      .filter((item) => differenceInCalendarDays(new Date(item.next_occurrence), now) <= 7)
+      .slice(0, 2)
+      .forEach((item) => {
+        alerts.push({
+          id: `recurring-${item.id}`,
+          tone: "info",
+          title: `${item.title} is due soon`,
+          description: `${format(new Date(item.next_occurrence), "MMM d")} | ${item.type === "expense" ? "-" : "+"}${formatMoneyWithPreferences(item.amount, preferences)}`,
+        });
       });
-    });
+  }
 
-  savingsGoals
-    .filter((goal) => !goal.isCompleted)
-    .slice(0, 1)
-    .forEach((goal) => {
-      alerts.push({
-        id: `savings-${goal.id}`,
-        tone: "success",
-        title: `${goal.name} is ${goal.progress.toFixed(0)}% funded`,
-        description: `${goal.remainingAmount.toFixed(2)} left to reach your goal.`,
+  if (preferences.savings_alerts_enabled) {
+    savingsGoals
+      .filter((goal) => !goal.isCompleted)
+      .slice(0, 1)
+      .forEach((goal) => {
+        alerts.push({
+          id: `savings-${goal.id}`,
+          tone: "success",
+          title: `${goal.name} is ${goal.progress.toFixed(0)}% funded`,
+          description: `${formatMoneyWithPreferences(goal.remainingAmount, preferences)} left to reach your goal.`,
+        });
       });
-    });
+  }
 
   if (alerts.length === 0 && transactions.length > 0) {
     alerts.push({

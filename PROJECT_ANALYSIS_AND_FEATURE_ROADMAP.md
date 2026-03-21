@@ -314,6 +314,8 @@ After that, the highest-value strategic feature is:
 - Analytics helper tests added
 - Phase 2 Supabase setup SQL added
 - Mobile-first dashboard overview page implemented
+- Budget rollover added to monthly budget goals
+- Profile and preferences added
 - Budget goals by category
 - Custom categories
 - Advanced search and filters

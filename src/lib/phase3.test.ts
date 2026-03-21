@@ -6,11 +6,14 @@ import type { Transaction } from "@/types/transactions";
 const budgetProgress: BudgetProgressItem[] = [
   {
     category: "food",
+    baseMonthlyLimit: 100,
+    carriedOver: 0,
     monthlyLimit: 100,
     spent: 125,
     remaining: -25,
     progress: 100,
     isOverBudget: true,
+    rolloverEnabled: false,
   },
 ];
 

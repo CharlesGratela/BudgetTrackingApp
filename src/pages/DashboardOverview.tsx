@@ -18,6 +18,7 @@ import BudgetGoalsDialog from "@/components/budgets/BudgetGoalsDialog";
 import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
 import RecurringTransactionsDialog from "@/components/recurring/RecurringTransactionsDialog";
 import SavingsGoalsDialog from "@/components/savings/SavingsGoalsDialog";
+import UserPreferencesDialog from "@/components/settings/UserPreferencesDialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useBudgetGoals } from "@/hooks/use-budget-goals";
@@ -26,10 +27,12 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useRecurringTransactions } from "@/hooks/use-recurring-transactions";
 import { useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useTransactions } from "@/hooks/use-transactions";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { buildSummary } from "@/lib/analytics";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
-import { buildBudgetProgress, getMonthKey } from "@/lib/planning";
-import { formatCategoryLabel, formatCurrency } from "@/lib/transactions";
+import { formatDateWithPreferences, formatMoneyWithPreferences } from "@/lib/preferences";
+import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
+import { formatCategoryLabel } from "@/lib/transactions";
 
 const safeCategoryLabel = (value?: string | null) => {
   try {
@@ -46,11 +49,15 @@ const DashboardOverview = () => {
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false);
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false);
+  const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
 
   const transactionsQuery = useTransactions(user?.id);
   const categoriesQuery = useCategories(user?.id);
+  const preferencesQuery = useUserPreferences(user?.id);
   const monthKey = getMonthKey();
+  const previousMonthKey = getPreviousMonthKey(monthKey);
   const budgetGoalsQuery = useBudgetGoals(user?.id, monthKey);
+  const previousBudgetGoalsQuery = useBudgetGoals(user?.id, previousMonthKey);
   const recurringTransactionsQuery = useRecurringTransactions(user?.id);
   const savingsGoalsQuery = useSavingsGoals(user?.id);
 
@@ -69,8 +76,8 @@ const DashboardOverview = () => {
     [categoriesQuery.data],
   );
   const budgetProgress = useMemo(
-    () => buildBudgetProgress(budgetGoalsQuery.data ?? [], transactions, monthKey),
-    [budgetGoalsQuery.data, monthKey, transactions],
+    () => buildBudgetProgress(budgetGoalsQuery.data ?? [], transactions, monthKey, previousBudgetGoalsQuery.data ?? []),
+    [budgetGoalsQuery.data, monthKey, previousBudgetGoalsQuery.data, transactions],
   );
   const budgetHighlights = useMemo(() => budgetProgress.slice(0, 3), [budgetProgress]);
   const budgetTotals = useMemo(() => {
@@ -95,6 +102,14 @@ const DashboardOverview = () => {
     () => buildSavingsProgress(savingsGoalsQuery.data ?? []),
     [savingsGoalsQuery.data],
   );
+  const preferences = preferencesQuery.data;
+  const formatMoney = (value: number) =>
+    preferences ? formatMoneyWithPreferences(value, preferences) : formatMoneyWithPreferences(value, {
+      preferred_currency: "USD",
+      locale: "en-US",
+    });
+  const formatDate = (value: string | Date, options?: Intl.DateTimeFormatOptions) =>
+    preferences ? formatDateWithPreferences(value, preferences, options) : formatDateWithPreferences(value, { locale: "en-US" }, options);
   const savingsProgress = useMemo(() => allSavingsProgress.slice(0, 3), [allSavingsProgress]);
   const smartAlerts = useMemo(
     () =>
@@ -103,8 +118,9 @@ const DashboardOverview = () => {
         recurringTransactions,
         savingsGoals: allSavingsProgress,
         transactions,
+        preferences: preferencesQuery.data,
       }).slice(0, 3),
-    [allSavingsProgress, budgetProgress, recurringTransactions, transactions],
+    [allSavingsProgress, budgetProgress, preferencesQuery.data, recurringTransactions, transactions],
   );
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
@@ -136,22 +152,22 @@ const DashboardOverview = () => {
   const summaryCards = [
     {
       label: "This Month",
-      value: formatCurrency(monthSummary.total),
+      value: formatMoney(monthSummary.total),
       caption: monthSummary.total >= 0 ? "Net positive so far" : "Spending is ahead",
     },
     {
       label: "Income",
-      value: formatCurrency(monthSummary.income),
+      value: formatMoney(monthSummary.income),
       caption: "Money coming in",
     },
     {
       label: "Expenses",
-      value: formatCurrency(monthSummary.expenses),
+      value: formatMoney(monthSummary.expenses),
       caption: "Money going out",
     },
     {
       label: "All-Time Balance",
-      value: formatCurrency(allTimeSummary.total),
+      value: formatMoney(allTimeSummary.total),
       caption: "Your overall running total",
     },
   ];
@@ -191,12 +207,12 @@ const DashboardOverview = () => {
               <div className="rounded-2xl border border-primary/10 bg-background/70 p-4">
                 <div className="text-sm text-muted-foreground">Available balance</div>
                 <div className="mt-2 font-heading text-3xl font-bold text-foreground sm:text-4xl">
-                  {formatCurrency(allTimeSummary.total)}
+                  {formatMoney(allTimeSummary.total)}
                 </div>
                 <div className="mt-2 text-sm text-muted-foreground">
                   {format(new Date(), "MMMM yyyy")} net:{" "}
                   <span className={monthSummary.total >= 0 ? "text-emerald-500" : "text-rose-500"}>
-                    {formatCurrency(monthSummary.total)}
+                    {formatMoney(monthSummary.total)}
                   </span>
                 </div>
               </div>
@@ -213,6 +229,10 @@ const DashboardOverview = () => {
                 <Button variant="outline" className="h-auto justify-start gap-2 rounded-2xl px-4 py-4" onClick={() => setIsSavingsDialogOpen(true)}>
                   <PiggyBank className="h-4 w-4" />
                   Savings
+                </Button>
+                <Button variant="outline" className="h-auto justify-start gap-2 rounded-2xl px-4 py-4" onClick={() => setIsPreferencesDialogOpen(true)}>
+                  <Settings2 className="h-4 w-4" />
+                  Preferences
                 </Button>
                 <Button variant="outline" className="h-auto justify-start gap-2 rounded-2xl px-4 py-4" onClick={() => navigate("/analytics")}>
                   <ArrowRight className="h-4 w-4" />
@@ -291,16 +311,16 @@ const DashboardOverview = () => {
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-muted/30 p-4">
                         <div className="text-xs text-muted-foreground">Budgeted</div>
-                        <div className="mt-1 font-heading text-xl font-bold text-foreground">{formatCurrency(budgetTotals.totalBudget)}</div>
+                        <div className="mt-1 font-heading text-xl font-bold text-foreground">{formatMoney(budgetTotals.totalBudget)}</div>
                       </div>
                       <div className="rounded-2xl bg-muted/30 p-4">
                         <div className="text-xs text-muted-foreground">Spent</div>
-                        <div className="mt-1 font-heading text-xl font-bold text-foreground">{formatCurrency(budgetTotals.totalSpent)}</div>
+                        <div className="mt-1 font-heading text-xl font-bold text-foreground">{formatMoney(budgetTotals.totalSpent)}</div>
                       </div>
                       <div className="rounded-2xl bg-muted/30 p-4">
                         <div className="text-xs text-muted-foreground">Remaining</div>
                         <div className={`mt-1 font-heading text-xl font-bold ${budgetTotals.remaining >= 0 ? "text-foreground" : "text-rose-500"}`}>
-                          {formatCurrency(budgetTotals.remaining)}
+                          {formatMoney(budgetTotals.remaining)}
                         </div>
                       </div>
                     </div>
@@ -312,8 +332,13 @@ const DashboardOverview = () => {
                             <div>
                               <div className="font-medium text-foreground">{safeCategoryLabel(item.category)}</div>
                               <div className="text-sm text-muted-foreground">
-                                {formatCurrency(item.spent)} of {formatCurrency(item.monthlyLimit)}
+                                {formatMoney(item.spent)} of {formatMoney(item.monthlyLimit)}
                               </div>
+                              {item.carriedOver > 0 && (
+                                <div className="text-xs text-primary">
+                                  Includes {formatMoney(item.carriedOver)} rolled over from {format(new Date(`${previousMonthKey}-01T00:00:00`), "MMMM")}
+                                </div>
+                              )}
                             </div>
                             <div className={`text-sm font-semibold ${item.isOverBudget ? "text-rose-500" : "text-muted-foreground"}`}>
                               {item.progress.toFixed(0)}%
@@ -354,13 +379,13 @@ const DashboardOverview = () => {
                         <div className="min-w-0">
                           <div className="truncate font-medium text-foreground">{safeCategoryLabel(transaction.category)}</div>
                           <div className="text-sm text-muted-foreground">
-                            {format(new Date(transaction.created_at), "MMM d, yyyy")}
+                            {formatDate(transaction.created_at)}
                             {transaction.description ? ` | ${transaction.description}` : ""}
                           </div>
                         </div>
                         <div className={`ml-3 shrink-0 text-sm font-semibold ${transaction.type === "income" ? "text-emerald-500" : "text-rose-500"}`}>
                           {transaction.type === "income" ? "+" : "-"}
-                          {formatCurrency(Math.abs(transaction.amount))}
+                          {formatMoney(Math.abs(transaction.amount))}
                         </div>
                       </button>
                     ))}
@@ -393,7 +418,7 @@ const DashboardOverview = () => {
                           <div>
                             <div className="font-medium text-foreground">{goal.name}</div>
                             <div className="text-sm text-muted-foreground">
-                              {formatCurrency(goal.currentAmount)} of {formatCurrency(goal.targetAmount)}
+                              {formatMoney(goal.currentAmount)} of {formatMoney(goal.targetAmount)}
                             </div>
                           </div>
                           <div className="text-sm font-semibold text-muted-foreground">{goal.progress.toFixed(0)}%</div>
@@ -433,12 +458,12 @@ const DashboardOverview = () => {
                           </div>
                           <div className={`text-sm font-semibold ${item.type === "income" ? "text-emerald-500" : "text-rose-500"}`}>
                             {item.type === "income" ? "+" : "-"}
-                            {formatCurrency(item.amount)}
+                            {formatMoney(item.amount)}
                           </div>
                         </div>
                         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                           <CalendarClock className="h-4 w-4" />
-                          Due {format(new Date(item.next_occurrence), "MMM d")}
+                          Due {formatDate(item.next_occurrence, { month: "short", day: "numeric" })}
                         </div>
                       </div>
                     ))}
@@ -464,6 +489,10 @@ const DashboardOverview = () => {
                   <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsSavingsDialogOpen(true)}>
                     <Wallet className="h-4 w-4" />
                     Update Savings Goals
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setIsPreferencesDialogOpen(true)}>
+                    <Settings2 className="h-4 w-4" />
+                    Profile and Preferences
                   </Button>
                 </div>
               </section>
@@ -502,6 +531,11 @@ const DashboardOverview = () => {
       <SavingsGoalsDialog
         open={isSavingsDialogOpen}
         onOpenChange={setIsSavingsDialogOpen}
+        userId={user?.id}
+      />
+      <UserPreferencesDialog
+        open={isPreferencesDialogOpen}
+        onOpenChange={setIsPreferencesDialogOpen}
         userId={user?.id}
       />
     </div>

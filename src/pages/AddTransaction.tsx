@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import TransactionForm from "@/components/transactions/TransactionForm";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useAddTransaction } from "@/hooks/use-transactions";
+import { getUserDefaultLandingPath } from "@/hooks/use-user-preferences";
 import { buildTransactionPayload } from "@/lib/transactions";
 
 const AddTransaction = () => {
@@ -43,7 +44,7 @@ const AddTransaction = () => {
         try {
           await addTransaction.mutateAsync(buildTransactionPayload(values, user.id));
           toast.success(`${values.type === "income" ? "Income" : "Expense"} of $${values.amount} added!`);
-          navigate("/dashboard");
+          navigate(await getUserDefaultLandingPath(user.id));
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
           toast.error(`Error adding transaction: ${message}`);

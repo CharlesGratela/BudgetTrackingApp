@@ -39,7 +39,7 @@ export const useSaveBudgetGoals = (userId?: string) => {
       goals,
     }: {
       monthKey: string;
-      goals: Array<{ category: string; monthly_limit: number }>;
+      goals: Array<{ category: string; monthly_limit: number; rollover_enabled: boolean }>;
     }) => {
       const deleteResult = await supabase.from("budget_goals").delete().eq("user_id", userId).eq("month_key", monthKey);
 
@@ -62,6 +62,7 @@ export const useSaveBudgetGoals = (userId?: string) => {
             user_id: userId,
             category: normalizeCategoryName(goal.category),
             monthly_limit: goal.monthly_limit,
+            rollover_enabled: goal.rollover_enabled,
             month_key: monthKey,
           })),
         )

@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { DEFAULT_TRANSACTION_CATEGORIES, normalizeCategoryName } from "@/lib/transactions";
 import type { BudgetCategory, BudgetGoal, BudgetProgressItem } from "@/types/planning";
 import type { Transaction, TransactionType } from "@/types/transactions";
@@ -42,22 +42,31 @@ export const mergeCategories = (categories: BudgetCategory[], type?: Transaction
   return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
 };
 
-type BudgetGoalRow = Omit<BudgetGoal, "monthly_limit"> & {
+type BudgetGoalRow = Omit<BudgetGoal, "monthly_limit" | "rollover_enabled"> & {
   monthly_limit: number | string;
+  rollover_enabled?: boolean | null;
 };
 
 export const normalizeBudgetGoal = (row: BudgetGoalRow): BudgetGoal => ({
   ...row,
   monthly_limit: Number(row.monthly_limit),
+  rollover_enabled: Boolean(row.rollover_enabled),
 });
 
 export const getMonthKey = (date = new Date()) => format(date, "yyyy-MM");
+
+export const getPreviousMonthKey = (monthKey: string) => {
+  const parsedDate = new Date(`${monthKey}-01T12:00:00.000Z`);
+  return format(subMonths(parsedDate, 1), "yyyy-MM");
+};
 
 export const buildBudgetProgress = (
   goals: BudgetGoal[],
   transactions: Transaction[],
   monthKey: string,
+  previousGoals: BudgetGoal[] = [],
 ): BudgetProgressItem[] => {
+  const previousMonthKey = getPreviousMonthKey(monthKey);
   const spendByCategory = transactions
     .filter((transaction) => transaction.type === "expense")
     .filter((transaction) => format(new Date(transaction.created_at), "yyyy-MM") === monthKey)
@@ -66,19 +75,37 @@ export const buildBudgetProgress = (
       return accumulator;
     }, {});
 
+  const previousSpendByCategory = transactions
+    .filter((transaction) => transaction.type === "expense")
+    .filter((transaction) => format(new Date(transaction.created_at), "yyyy-MM") === previousMonthKey)
+    .reduce<Record<string, number>>((accumulator, transaction) => {
+      accumulator[transaction.category] = (accumulator[transaction.category] || 0) + transaction.amount;
+      return accumulator;
+    }, {});
+
   return goals
     .map((goal) => {
+      const matchingPreviousGoal = previousGoals.find((item) => item.category === goal.category);
+      const previousRemaining = matchingPreviousGoal
+        ? matchingPreviousGoal.monthly_limit - (previousSpendByCategory[goal.category] || 0)
+        : 0;
+      const carriedOver =
+        matchingPreviousGoal?.rollover_enabled && previousRemaining > 0 ? previousRemaining : 0;
       const spent = spendByCategory[goal.category] || 0;
-      const remaining = goal.monthly_limit - spent;
-      const progress = goal.monthly_limit > 0 ? Math.min((spent / goal.monthly_limit) * 100, 100) : 0;
+      const effectiveLimit = goal.monthly_limit + carriedOver;
+      const remaining = effectiveLimit - spent;
+      const progress = effectiveLimit > 0 ? Math.min((spent / effectiveLimit) * 100, 100) : 0;
 
       return {
         category: goal.category,
-        monthlyLimit: goal.monthly_limit,
+        baseMonthlyLimit: goal.monthly_limit,
+        carriedOver,
+        monthlyLimit: effectiveLimit,
         spent,
         remaining,
         progress,
-        isOverBudget: spent > goal.monthly_limit,
+        isOverBudget: spent > effectiveLimit,
+        rolloverEnabled: goal.rollover_enabled,
       };
     })
     .sort((a, b) => b.progress - a.progress);
