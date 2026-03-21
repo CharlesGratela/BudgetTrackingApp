@@ -57,13 +57,14 @@ const UserPreferencesDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b border-border px-6 pt-6 pb-4 pr-12">
           <DialogTitle>Profile and Preferences</DialogTitle>
           <DialogDescription>Personalize how BudgetFlow formats money, dates, alerts, and your default home screen.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Preferred Currency</Label>
@@ -183,9 +184,10 @@ const UserPreferencesDialog = ({
               />
             </div>
           </div>
+          </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex shrink-0 justify-end border-t border-border px-6 py-4">
           <Button type="button" onClick={handleSave} disabled={savePreferences.isPending || preferencesQuery.isLoading}>
             Save Preferences
           </Button>
