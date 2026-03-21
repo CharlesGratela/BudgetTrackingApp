@@ -63,7 +63,7 @@ const EditTransaction = () => {
           });
 
           toast.success("Transaction updated.");
-          navigate("/analytics");
+          navigate("/dashboard");
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
           toast.error(`Error updating transaction: ${message}`);

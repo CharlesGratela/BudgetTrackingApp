@@ -93,7 +93,7 @@ export const buildSmartAlerts = ({
         id: `recurring-${item.id}`,
         tone: "info",
         title: `${item.title} is due soon`,
-        description: `${format(new Date(item.next_occurrence), "MMM d")} • ${item.type === "expense" ? "-" : "+"}$${item.amount.toFixed(2)}`,
+        description: `${format(new Date(item.next_occurrence), "MMM d")} | ${item.type === "expense" ? "-" : "+"}$${item.amount.toFixed(2)}`,
       });
     });
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import BudgetGoalsDialog from "@/components/budgets/BudgetGoalsDialog";
@@ -269,10 +269,16 @@ const Analytics = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-1">Dashboard</h1>
-                <p className="text-muted-foreground">Your financial overview at a glance.</p>
+                <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-1">Analytics</h1>
+                <p className="text-muted-foreground">Dive deeper into trends, filters, and detailed reporting.</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Link to="/dashboard">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Wallet className="w-4 h-4" />
+                    Overview
+                  </Button>
+                </Link>
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
                   <Settings2 className="w-4 h-4" />
                   Manage Categories
@@ -606,7 +612,7 @@ const Analytics = () => {
           </div>
 
           <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-            <h3 className="text-lg font-heading font-semibold text-foreground mb-4">Overview Actions</h3>
+            <h3 className="text-lg font-heading font-semibold text-foreground mb-4">Analytics Actions</h3>
             <div className="space-y-3">
               <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/add-transaction")}>
                 <Plus className="w-4 h-4" />

@@ -35,7 +35,7 @@ const Landing = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/analytics");
+        navigate("/dashboard");
       }
     });
   }, [navigate]);

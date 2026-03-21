@@ -43,7 +43,7 @@ const AddTransaction = () => {
         try {
           await addTransaction.mutateAsync(buildTransactionPayload(values, user.id));
           toast.success(`${values.type === "income" ? "Income" : "Expense"} of $${values.amount} added!`);
-          navigate("/analytics");
+          navigate("/dashboard");
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
           toast.error(`Error adding transaction: ${message}`);

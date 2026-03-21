@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Wallet, BarChart3, PlusCircle, LogIn, LogOut, Menu, X } from "lucide-react";
+import { Wallet, BarChart3, LayoutDashboard, PlusCircle, LogIn, LogOut, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { ModeToggle } from "@/components/ModeToggle";
@@ -34,6 +34,7 @@ const Navbar = () => {
   };
 
   const navLinks = [
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/add-transaction", label: "Add Transaction", icon: PlusCircle },
   ];

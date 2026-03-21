@@ -8,6 +8,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import DashboardOverview from "./pages/DashboardOverview";
 import Analytics from "./pages/Analytics";
 import AddTransaction from "./pages/AddTransaction";
 import EditTransaction from "./pages/EditTransaction";
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<DashboardOverview />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/add-transaction" element={<AddTransaction />} />
             <Route path="/transactions/:transactionId/edit" element={<EditTransaction />} />

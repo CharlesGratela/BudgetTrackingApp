@@ -313,6 +313,7 @@ After that, the highest-value strategic feature is:
 - Analytics refactored to use shared transaction utilities and query hooks
 - Analytics helper tests added
 - Phase 2 Supabase setup SQL added
+- Mobile-first dashboard overview page implemented
 - Budget goals by category
 - Custom categories
 - Advanced search and filters
