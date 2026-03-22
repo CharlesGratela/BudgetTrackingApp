@@ -69,96 +69,98 @@ const SavingsGoalsDialog = ({ open, onOpenChange, userId }: SavingsGoalsDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b border-border px-6 pt-6 pb-4 pr-12">
           <DialogTitle>Savings Goals</DialogTitle>
           <DialogDescription>Track long-term goals like emergency fund, travel, gadgets, or tuition.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="goal-name">Goal Name</Label>
-              <Input
-                id="goal-name"
-                value={formValues.name}
-                onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, name: event.target.value }))}
-                placeholder="Emergency Fund"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="target-amount">Target Amount</Label>
+                <Label htmlFor="goal-name">Goal Name</Label>
                 <Input
-                  id="target-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formValues.targetAmount}
-                  onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, targetAmount: event.target.value }))}
+                  id="goal-name"
+                  value={formValues.name}
+                  onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, name: event.target.value }))}
+                  placeholder="Emergency Fund"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="current-amount">Current Saved</Label>
-                <Input
-                  id="current-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formValues.currentAmount}
-                  onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, currentAmount: event.target.value }))}
-                />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="target-date">Target Date</Label>
-              <Input
-                id="target-date"
-                type="date"
-                value={formValues.targetDate}
-                onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, targetDate: event.target.value }))}
-              />
-            </div>
-
-            <Button type="button" className="w-full gap-2" onClick={handleSaveGoal} disabled={saveSavingsGoal.isPending}>
-              <Plus className="w-4 h-4" />
-              Save Savings Goal
-            </Button>
-          </div>
-
-          <div className="space-y-3 max-h-[500px] overflow-y-auto">
-            {(savingsGoalsQuery.data ?? []).length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground">
-                No savings goals yet.
-              </div>
-            ) : (
-              (savingsGoalsQuery.data ?? []).map((goal) => (
-                <div key={goal.id} className="rounded-xl border border-border p-4 bg-muted/20">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-medium text-foreground">{goal.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatCurrency(goal.current_amount)} saved of {formatCurrency(goal.target_amount)}
-                      </div>
-                      {goal.target_date && (
-                        <div className="text-xs text-muted-foreground mt-1">Target {format(new Date(goal.target_date), "MMM d, yyyy")}</div>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-rose-500"
-                      onClick={() => handleDelete(goal)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="target-amount">Target Amount</Label>
+                  <Input
+                    id="target-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formValues.targetAmount}
+                    onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, targetAmount: event.target.value }))}
+                  />
                 </div>
-              ))
-            )}
+                <div className="space-y-2">
+                  <Label htmlFor="current-amount">Current Saved</Label>
+                  <Input
+                    id="current-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formValues.currentAmount}
+                    onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, currentAmount: event.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="target-date">Target Date</Label>
+                <Input
+                  id="target-date"
+                  type="date"
+                  value={formValues.targetDate}
+                  onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, targetDate: event.target.value }))}
+                />
+              </div>
+
+              <Button type="button" className="w-full gap-2" onClick={handleSaveGoal} disabled={saveSavingsGoal.isPending}>
+                <Plus className="w-4 h-4" />
+                Save Savings Goal
+              </Button>
+            </div>
+
+            <div className="space-y-3 max-h-[420px] overflow-y-auto lg:max-h-[500px]">
+              {(savingsGoalsQuery.data ?? []).length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground">
+                  No savings goals yet.
+                </div>
+              ) : (
+                (savingsGoalsQuery.data ?? []).map((goal) => (
+                  <div key={goal.id} className="rounded-xl border border-border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-foreground">{goal.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatCurrency(goal.current_amount)} saved of {formatCurrency(goal.target_amount)}
+                        </div>
+                        {goal.target_date && (
+                          <div className="mt-1 text-xs text-muted-foreground">Target {format(new Date(goal.target_date), "MMM d, yyyy")}</div>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                        onClick={() => handleDelete(goal)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
