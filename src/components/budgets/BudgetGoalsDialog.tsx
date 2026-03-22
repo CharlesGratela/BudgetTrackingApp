@@ -74,56 +74,58 @@ const BudgetGoalsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b border-border px-6 pt-6 pb-4 pr-12">
           <DialogTitle>Monthly Budget Goals</DialogTitle>
           <DialogDescription>Set a monthly target for each expense category.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[420px] overflow-y-auto pr-1">
-          {categories.map((category) => (
-            <div key={category} className="space-y-3 rounded-2xl border border-border p-4">
-              <Label htmlFor={`budget-${category}`}>{formatCategoryLabel(category)}</Label>
-              <Input
-                id={`budget-${category}`}
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={values[category]?.amount ?? ""}
-                onChange={(event) =>
-                  setValues((currentValue) => ({
-                    ...currentValue,
-                    [category]: {
-                      amount: event.target.value,
-                      rolloverEnabled: currentValue[category]?.rolloverEnabled ?? false,
-                    },
-                  }))
-                }
-              />
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/30 px-3 py-2">
-                <div>
-                  <div className="text-sm font-medium text-foreground">Enable rollover</div>
-                  <div className="text-xs text-muted-foreground">Carry unused budget into the next month.</div>
-                </div>
-                <Switch
-                  checked={values[category]?.rolloverEnabled ?? false}
-                  onCheckedChange={(checked) =>
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {categories.map((category) => (
+              <div key={category} className="space-y-3 rounded-2xl border border-border p-4">
+                <Label htmlFor={`budget-${category}`}>{formatCategoryLabel(category)}</Label>
+                <Input
+                  id={`budget-${category}`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={values[category]?.amount ?? ""}
+                  onChange={(event) =>
                     setValues((currentValue) => ({
                       ...currentValue,
                       [category]: {
-                        amount: currentValue[category]?.amount ?? "",
-                        rolloverEnabled: checked,
+                        amount: event.target.value,
+                        rolloverEnabled: currentValue[category]?.rolloverEnabled ?? false,
                       },
                     }))
                   }
                 />
+                <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/30 px-3 py-2">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Enable rollover</div>
+                    <div className="text-xs text-muted-foreground">Carry unused budget into the next month.</div>
+                  </div>
+                  <Switch
+                    checked={values[category]?.rolloverEnabled ?? false}
+                    onCheckedChange={(checked) =>
+                      setValues((currentValue) => ({
+                        ...currentValue,
+                        [category]: {
+                          amount: currentValue[category]?.amount ?? "",
+                          rolloverEnabled: checked,
+                        },
+                      }))
+                    }
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex shrink-0 justify-end border-t border-border px-6 py-4">
           <Button type="button" onClick={handleSave} disabled={saveBudgetGoals.isPending || budgetGoalsQuery.isLoading}>
             Save Goals
           </Button>
