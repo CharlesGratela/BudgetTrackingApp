@@ -13,13 +13,14 @@ describe("roundMoney", () => {
 describe("buildTransactionPayload", () => {
   it("anchors the picked date at noon UTC so it does not roll back a day", () => {
     const payload = buildTransactionPayload(
-      { amount: "12.50", category: "food", description: "  Lunch  ", date: "2026-03-11", type: "expense" },
+      { amount: "12.50", category: "food", description: "  Lunch  ", merchant: "  Cafe  ", date: "2026-03-11", type: "expense" },
       "user-1",
     );
 
     expect(payload.created_at).toBe("2026-03-11T12:00:00.000Z");
     expect(payload.amount).toBe(12.5);
     expect(payload.description).toBe("Lunch");
+    expect(payload.merchant).toBe("Cafe");
     expect(payload.user_id).toBe("user-1");
   });
 

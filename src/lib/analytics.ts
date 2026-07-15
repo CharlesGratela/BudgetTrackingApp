@@ -106,9 +106,11 @@ export const filterTransactions = (
     const query = searchQuery.trim().toLowerCase();
     filtered = filtered.filter((transaction) => {
       const description = transaction.description?.toLowerCase() ?? "";
+      const merchant = transaction.merchant?.toLowerCase() ?? "";
       return (
         transaction.category.toLowerCase().includes(query) ||
         transaction.type.toLowerCase().includes(query) ||
+        merchant.includes(query) ||
         description.includes(query)
       );
     });

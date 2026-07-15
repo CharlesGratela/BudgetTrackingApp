@@ -180,12 +180,13 @@ const Analytics = () => {
       return;
     }
 
-    const headers = ["Date", "Type", "Category", "Amount", "Description"];
+    const headers = ["Date", "Type", "Category", "Merchant", "Amount", "Description"];
     const csvData = filteredTransactions.map((transaction) =>
       [
         escapeCsvValue(format(new Date(transaction.created_at), "yyyy-MM-dd")),
         escapeCsvValue(transaction.type),
         escapeCsvValue(transaction.category),
+        escapeCsvValue(transaction.merchant ?? ""),
         escapeCsvValue(transaction.amount),
         escapeCsvValue(transaction.description),
       ].join(","),
@@ -785,7 +786,10 @@ const Analytics = () => {
                         ) : (
                           <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
                         )}
-                        <p className="text-sm font-medium text-foreground">{safeCategoryLabel(transaction.category)}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {safeCategoryLabel(transaction.category)}
+                          {transaction.merchant ? ` - ${transaction.merchant}` : ""}
+                        </p>
                       </div>
 
                       <div className="text-xs text-muted-foreground ml-4">

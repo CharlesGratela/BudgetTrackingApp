@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
 import { useCategories } from "@/hooks/use-categories";
+import { useMerchants } from "@/hooks/use-merchants";
 import { DEFAULT_TRANSACTION_CATEGORIES, formatCategoryLabel } from "@/lib/transactions";
 import type { TransactionFormValues, TransactionType } from "@/types/transactions";
 
@@ -16,6 +17,7 @@ const getDefaultValues = (): TransactionFormValues => ({
   amount: "",
   category: "",
   description: "",
+  merchant: "",
   date: new Date().toISOString().split("T")[0],
 });
 
@@ -41,6 +43,7 @@ const TransactionForm = ({
   const [values, setValues] = useState<TransactionFormValues>(initialValues ?? getDefaultValues());
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const categoriesQuery = useCategories(userId, values.type);
+  const merchantsQuery = useMerchants(userId);
 
   useEffect(() => {
     if (initialValues) {
@@ -179,6 +182,23 @@ const TransactionForm = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="merchant">Merchant / Payee (optional)</Label>
+                <Input
+                  id="merchant"
+                  list="merchant-suggestions"
+                  placeholder="e.g. Netflix, Starbucks"
+                  value={values.merchant}
+                  onChange={(event) => setValues((currentValues) => ({ ...currentValues, merchant: event.target.value }))}
+                  className="h-11"
+                />
+                <datalist id="merchant-suggestions">
+                  {(merchantsQuery.data ?? []).map((merchant) => (
+                    <option key={merchant} value={merchant} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="space-y-2">

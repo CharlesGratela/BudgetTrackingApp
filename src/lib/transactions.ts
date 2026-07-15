@@ -23,6 +23,7 @@ export const transactionToFormValues = (transaction: Transaction): TransactionFo
   amount: transaction.amount.toString(),
   category: transaction.category,
   description: transaction.description ?? "",
+  merchant: transaction.merchant ?? "",
   date: transaction.created_at.split("T")[0],
   type: transaction.type,
 });
@@ -34,6 +35,7 @@ export const buildTransactionPayload = (
   amount: Number(values.amount),
   category: values.category,
   description: values.description.trim() || null,
+  merchant: values.merchant.trim() || null,
   created_at: new Date(`${values.date}T12:00:00.000Z`).toISOString(),
   type: values.type,
   user_id: userId,
