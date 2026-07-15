@@ -24,6 +24,7 @@ export const transactionToFormValues = (transaction: Transaction): TransactionFo
   category: transaction.category,
   description: transaction.description ?? "",
   merchant: transaction.merchant ?? "",
+  receiptPath: transaction.receipt_path ?? "",
   date: transaction.created_at.split("T")[0],
   type: transaction.type,
 });
@@ -36,6 +37,7 @@ export const buildTransactionPayload = (
   category: values.category,
   description: values.description.trim() || null,
   merchant: values.merchant.trim() || null,
+  receipt_path: values.receiptPath || null,
   created_at: new Date(`${values.date}T12:00:00.000Z`).toISOString(),
   type: values.type,
   user_id: userId,

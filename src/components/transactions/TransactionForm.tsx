@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
 import { Check, Loader2, MinusCircle, PlusCircle, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
 import { useCategories } from "@/hooks/use-categories";
 import { useMerchants } from "@/hooks/use-merchants";
+import { uploadReceipt } from "@/lib/receipts";
+import { toast } from "sonner";
 import { DEFAULT_TRANSACTION_CATEGORIES, formatCategoryLabel } from "@/lib/transactions";
 import type { TransactionFormValues, TransactionType } from "@/types/transactions";
 
@@ -18,6 +20,7 @@ const getDefaultValues = (): TransactionFormValues => ({
   category: "",
   description: "",
   merchant: "",
+  receiptPath: "",
   date: new Date().toISOString().split("T")[0],
 });
 
@@ -44,6 +47,25 @@ const TransactionForm = ({
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const categoriesQuery = useCategories(userId, values.type);
   const merchantsQuery = useMerchants(userId);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+
+  const handleReceiptChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !userId) {
+      return;
+    }
+    setUploadingReceipt(true);
+    try {
+      const path = await uploadReceipt(userId, file);
+      setValues((current) => ({ ...current, receiptPath: path }));
+      toast.success("Receipt attached.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed. Is Storage set up?");
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
 
   useEffect(() => {
     if (initialValues) {
@@ -212,6 +234,27 @@ const TransactionForm = ({
                   }
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="receipt">Receipt (optional)</Label>
+                {values.receiptPath ? (
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">Receipt attached</span>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setValues((current) => ({ ...current, receiptPath: "" }))}>
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    id="receipt"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleReceiptChange}
+                    disabled={uploadingReceipt}
+                  />
+                )}
+                {uploadingReceipt && <p className="text-xs text-muted-foreground">Uploading...</p>}
               </div>
 
               <Button type="submit" disabled={isSubmitting} className="w-full h-12 font-semibold text-base gap-2">

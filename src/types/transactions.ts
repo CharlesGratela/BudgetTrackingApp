@@ -8,6 +8,7 @@ export interface Transaction {
   type: TransactionType;
   description: string | null;
   merchant?: string | null;
+  receipt_path?: string | null;
   created_at: string;
   recurring_transaction_id?: string | null;
 }
@@ -17,6 +18,7 @@ export interface TransactionFormValues {
   category: string;
   description: string;
   merchant: string;
+  receiptPath: string;
   date: string;
   type: TransactionType;
 }
@@ -26,6 +28,7 @@ export interface TransactionMutationInput {
   category: string;
   description: string | null;
   merchant: string | null;
+  receipt_path: string | null;
   created_at: string;
   type: TransactionType;
   user_id: string;

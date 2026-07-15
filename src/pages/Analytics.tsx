@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, ArrowUpDown, ChevronDown, Download, Edit2, Filter, Plus, Repeat, Search, Settings2, Target, Trash2, Wallet } from "lucide-react";
+import { AlertCircle, ArrowUpDown, ChevronDown, Download, Edit2, Filter, Paperclip, Plus, Repeat, Search, Settings2, Target, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useBudgetGoals } from "@/hooks/use-budget-goals";
 import { useCategories } from "@/hooks/use-categories";
@@ -42,6 +42,7 @@ import {
 import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
 import { formatCategoryLabel } from "@/lib/transactions";
 import { openPrintReport } from "@/lib/report";
+import { getReceiptUrl } from "@/lib/receipts";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import type { TransactionFilters } from "@/types/transactions";
 import { DollarSign, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
@@ -259,6 +260,15 @@ const Analytics = () => {
       ],
       categories: categoryData.map((entry) => ({ name: safeCategoryLabel(entry.name), value: formatMoney(entry.value) })),
     });
+  };
+
+  const handleViewReceipt = async (path: string) => {
+    const url = await getReceiptUrl(path);
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      toast.error("Could not open receipt.");
+    }
   };
 
   if (isCheckingAuth || transactionsQuery.isLoading) {
@@ -840,6 +850,20 @@ const Analytics = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                          {transaction.receipt_path && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleViewReceipt(transaction.receipt_path!);
+                              }}
+                              aria-label="View receipt"
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
