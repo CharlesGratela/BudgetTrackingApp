@@ -26,6 +26,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useFormatters } from "@/hooks/use-formatters";
 import { useAutoGenerateRecurring } from "@/hooks/use-auto-generate-recurring";
+import { useAnalyticsFilters } from "@/hooks/use-analytics-filters";
 import { useRecurringTransactions } from "@/hooks/use-recurring-transactions";
 import { useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useDeleteTransaction, useTransactions } from "@/hooks/use-transactions";
@@ -88,25 +89,37 @@ const Analytics = () => {
   useAutoGenerateRecurring(user?.id);
   const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
 
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("this-month");
-  const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sortOrder, setSortOrder] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [minAmount, setMinAmount] = useState("");
-  const [maxAmount, setMaxAmount] = useState("");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
-  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(10);
+  const {
+    selectedPeriod,
+    setSelectedPeriod,
+    typeFilter,
+    setTypeFilter,
+    categoryFilter,
+    setCategoryFilter,
+    sortOrder,
+    setSortOrder,
+    searchQuery,
+    setSearchQuery,
+    minAmount,
+    setMinAmount,
+    maxAmount,
+    setMaxAmount,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
+    expandedTxId,
+    setExpandedTxId,
+    visibleCount,
+    setVisibleCount,
+    filters,
+    resetAdvancedFilters,
+  } = useAnalyticsFilters();
+
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = useState(false);
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false);
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false);
-
-  useEffect(() => {
-    setVisibleCount(10);
-  }, [selectedPeriod, typeFilter, categoryFilter, sortOrder, searchQuery, minAmount, maxAmount, customStartDate, customEndDate]);
 
   const uniqueCategories = useMemo(() => getUniqueCategories(transactions), [transactions]);
   const allCategoryOptions = useMemo(() => {
@@ -123,21 +136,10 @@ const Analytics = () => {
   );
   const periods = useMemo(() => getSalaryPeriods(transactions), [transactions]);
 
-  const filteredTransactions = useMemo(() => {
-    const filters: TransactionFilters = {
-      selectedPeriod,
-      typeFilter,
-      categoryFilter,
-      sortOrder,
-      searchQuery,
-      minAmount,
-      maxAmount,
-      customStartDate,
-      customEndDate,
-    };
-
-    return filterTransactions(transactions, filters, periods);
-  }, [transactions, selectedPeriod, typeFilter, categoryFilter, sortOrder, searchQuery, minAmount, maxAmount, customStartDate, customEndDate, periods]);
+  const filteredTransactions = useMemo(
+    () => filterTransactions(transactions, filters, periods),
+    [transactions, filters, periods],
+  );
 
   const summary = useMemo(() => buildSummary(filteredTransactions), [filteredTransactions]);
   const dailyData = useMemo(() => buildDailyData(filteredTransactions), [filteredTransactions]);
@@ -218,14 +220,6 @@ const Analytics = () => {
     } catch {
       toast.error("Failed to delete transaction");
     }
-  };
-
-  const resetAdvancedFilters = () => {
-    setSearchQuery("");
-    setMinAmount("");
-    setMaxAmount("");
-    setCustomStartDate("");
-    setCustomEndDate("");
   };
 
   const savingsRate = summary.income > 0 ? ((summary.income - summary.expenses) / summary.income) * 100 : 0;
