@@ -212,6 +212,7 @@ Then run:
 - [supabase_phase9_setup.sql](./supabase_phase9_setup.sql)
 - [supabase_phase10_setup.sql](./supabase_phase10_setup.sql)
 - [supabase_phase11_setup.sql](./supabase_phase11_setup.sql)
+- [supabase_phase12_setup.sql](./supabase_phase12_setup.sql)
 
 These add support for:
 
@@ -228,6 +229,7 @@ These add support for:
 - recurring end dates, skip, and upcoming preview (phase 9)
 - merchant / payee on transactions (phase 10)
 - transaction receipts via Supabase Storage (phase 11)
+- emailed bill reminders (phase 12 + the send-notifications Edge Function)
 
 > Phase 5 is optional to run immediately: until it is applied, budget-goal saving
 > falls back to the previous (non-atomic) two-step write. Applying it makes the
@@ -243,6 +245,12 @@ These add support for:
 > hourly with pg_cron (Option A). Alternatively deploy the Edge Function in
 > `supabase/functions/generate-recurring` and schedule that (Option B) — use one
 > trigger, not both.
+>
+> Phase 12 + `supabase/functions/send-notifications` email bill reminders for
+> recurring items due within 3 days (honoring each user's recurring-alerts
+> preference, de-duped via `notification_log`). Requires a Resend API key:
+> `supabase secrets set RESEND_API_KEY=... RESEND_FROM="BudgetFlow <you@domain>"`,
+> then `supabase functions deploy send-notifications` and schedule it daily.
 
 ## Scripts
 
