@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,29 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        navigate(await getUserDefaultLandingPath(data.session.user.id), { replace: true });
+      }
+    });
+  }, [navigate]);
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Enter your email above first, then click Forgot password.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset email sent. Check your inbox.");
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,10 +143,20 @@ const Login = () => {
                   className="h-11 pl-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
                   required
                 />
               </div>
             </div>
+            {isSignUp ? (
+              <p className="text-xs text-muted-foreground">Use at least 6 characters.</p>
+            ) : (
+              <div className="text-right">
+                <button type="button" onClick={handleForgotPassword} className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </button>
+              </div>
+            )}
             <Button className="w-full h-11 font-semibold" type="submit" disabled={loading}>
               {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
             </Button>

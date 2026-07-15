@@ -13,6 +13,7 @@ import Navbar from "./components/Navbar";
 // Each route becomes its own chunk, fetched on navigation.
 const Landing = lazy(() => import("./pages/Landing"));
 const Login = lazy(() => import("./pages/Login"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const DashboardOverview = lazy(() => import("./pages/DashboardOverview"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const AddTransaction = lazy(() => import("./pages/AddTransaction"));
@@ -44,6 +45,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<DashboardOverview />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/add-transaction" element={<AddTransaction />} />
