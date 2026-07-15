@@ -64,6 +64,18 @@ describe("phase 3 helpers", () => {
     expect(nextOccurrence.startsWith("2026-04-01")).toBe(true);
   });
 
+  it("does not throw on a malformed start date", () => {
+    const now = new Date("2026-03-20T00:00:00.000Z");
+    expect(() => getNextOccurrence("not-a-date", "monthly", now)).not.toThrow();
+    expect(getNextOccurrence("", "weekly", now)).toBe(now.toISOString());
+  });
+
+  it("advances a past occurrence to a non-past date", () => {
+    const now = new Date("2026-03-20T00:00:00.000Z");
+    const next = new Date(getNextOccurrence("2026-03-01", "weekly", now));
+    expect(next.getTime()).toBeGreaterThanOrEqual(now.getTime());
+  });
+
   it("builds savings progress", () => {
     const progress = buildSavingsProgress(savingsGoals);
     expect(progress[0].progress).toBe(40);

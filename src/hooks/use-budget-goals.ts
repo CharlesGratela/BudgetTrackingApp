@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { isMissingRelationError, normalizeBudgetGoal } from "@/lib/planning";
+import { isMissingFunctionError, isMissingRelationError, normalizeBudgetGoal } from "@/lib/planning";
 import { normalizeCategoryName } from "@/lib/transactions";
 import type { BudgetGoal } from "@/types/planning";
 
@@ -30,6 +30,34 @@ export const useBudgetGoals = (userId?: string, monthKey?: string) =>
     },
   });
 
+type BudgetGoalInput = { category: string; monthly_limit: number; rollover_enabled: boolean };
+
+const budgetGoalsSetupError = () =>
+  new Error("The budget_goals table is not set up yet. Run supabase_phase2_setup.sql first.");
+
+// Non-atomic two-step write, used only until supabase_phase5_setup.sql is applied.
+const replaceBudgetGoalsFallback = async (userId: string, monthKey: string, goals: BudgetGoalInput[]) => {
+  const deleteResult = await supabase.from("budget_goals").delete().eq("user_id", userId).eq("month_key", monthKey);
+  if (deleteResult.error) {
+    throw isMissingRelationError(deleteResult.error) ? budgetGoalsSetupError() : deleteResult.error;
+  }
+
+  if (goals.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("budget_goals")
+    .insert(goals.map((goal) => ({ ...goal, user_id: userId, month_key: monthKey })))
+    .select("*");
+
+  if (error) {
+    throw isMissingRelationError(error) ? budgetGoalsSetupError() : error;
+  }
+
+  return (data ?? []).map(normalizeBudgetGoal);
+};
+
 export const useSaveBudgetGoals = (userId?: string) => {
   const queryClient = useQueryClient();
 
@@ -39,44 +67,40 @@ export const useSaveBudgetGoals = (userId?: string) => {
       goals,
     }: {
       monthKey: string;
-      goals: Array<{ category: string; monthly_limit: number; rollover_enabled: boolean }>;
+      goals: BudgetGoalInput[];
     }) => {
-      const deleteResult = await supabase.from("budget_goals").delete().eq("user_id", userId).eq("month_key", monthKey);
-
-      if (deleteResult.error) {
-        if (isMissingRelationError(deleteResult.error)) {
-          throw new Error("The budget_goals table is not set up yet. Run supabase_phase2_setup.sql first.");
-        }
-
-        throw deleteResult.error;
+      if (!userId) {
+        throw new Error("You must be signed in to save budget goals.");
       }
 
-      if (goals.length === 0) {
-        return [];
+      const normalizedGoals = goals.map((goal) => ({
+        category: normalizeCategoryName(goal.category),
+        monthly_limit: goal.monthly_limit,
+        rollover_enabled: goal.rollover_enabled,
+      }));
+
+      // Atomic replace via a Postgres function (single transaction) so a failure
+      // can't leave the month with its goals deleted but not re-inserted.
+      const { data, error } = await supabase.rpc("replace_month_budget_goals", {
+        p_month_key: monthKey,
+        p_goals: normalizedGoals,
+      });
+
+      if (!error) {
+        return (data ?? []).map(normalizeBudgetGoal);
       }
 
-      const { data, error } = await supabase
-        .from("budget_goals")
-        .insert(
-          goals.map((goal) => ({
-            user_id: userId,
-            category: normalizeCategoryName(goal.category),
-            monthly_limit: goal.monthly_limit,
-            rollover_enabled: goal.rollover_enabled,
-            month_key: monthKey,
-          })),
-        )
-        .select("*");
-
-      if (error) {
-        if (isMissingRelationError(error)) {
-          throw new Error("The budget_goals table is not set up yet. Run supabase_phase2_setup.sql first.");
-        }
-
-        throw error;
+      if (isMissingRelationError(error)) {
+        throw budgetGoalsSetupError();
       }
 
-      return (data ?? []).map(normalizeBudgetGoal);
+      // Until supabase_phase5_setup.sql is applied the function won't exist —
+      // degrade to the previous (non-atomic) two-step write.
+      if (isMissingFunctionError(error)) {
+        return replaceBudgetGoalsFallback(userId, monthKey, normalizedGoals);
+      }
+
+      throw error;
     },
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: [BUDGET_GOALS_QUERY_KEY, userId, variables.monthKey] });

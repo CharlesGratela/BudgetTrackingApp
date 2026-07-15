@@ -1,7 +1,7 @@
 import { addMonths, addWeeks, differenceInCalendarDays, format } from "date-fns";
 import { DEFAULT_USER_PREFERENCES, formatMoneyWithPreferences } from "@/lib/preferences";
 import { isMissingRelationError } from "@/lib/planning";
-import { formatCategoryLabel } from "@/lib/transactions";
+import { formatCategoryLabel, roundMoney } from "@/lib/transactions";
 import type { BudgetProgressItem } from "@/types/planning";
 import type { RecurringFrequency, RecurringTransaction, SavingsGoal, SavingsGoalProgress, SmartAlert } from "@/types/phase3";
 import type { UserPreferences } from "@/types/preferences";
@@ -31,10 +31,21 @@ export const normalizeSavingsGoal = (row: SavingsRow): SavingsGoal => ({
 
 export const getNextOccurrence = (startDate: string, frequency: RecurringFrequency, now = new Date()) => {
   let nextDate = new Date(`${startDate}T12:00:00.000Z`);
+
+  // A malformed start date yields an Invalid Date; calling toISOString() on it
+  // throws RangeError and fails the recurring mutation. Fall back to `now`.
+  if (Number.isNaN(nextDate.getTime())) {
+    return new Date(now).toISOString();
+  }
+
   const comparisonDate = new Date(now);
 
-  while (nextDate < comparisonDate) {
+  // The loop always terminates for a valid date; the guard is a defensive bound
+  // against unexpected date-fns edge cases (weekly over ~40 years).
+  let steps = 0;
+  while (nextDate < comparisonDate && steps < 2080) {
     nextDate = frequency === "weekly" ? addWeeks(nextDate, 1) : addMonths(nextDate, 1);
+    steps += 1;
   }
 
   return nextDate.toISOString();
@@ -43,7 +54,7 @@ export const getNextOccurrence = (startDate: string, frequency: RecurringFrequen
 export const buildSavingsProgress = (goals: SavingsGoal[]): SavingsGoalProgress[] =>
   goals
     .map((goal) => {
-      const remainingAmount = goal.target_amount - goal.current_amount;
+      const remainingAmount = roundMoney(goal.target_amount - goal.current_amount);
       const progress = goal.target_amount > 0 ? Math.min((goal.current_amount / goal.target_amount) * 100, 100) : 0;
 
       return {

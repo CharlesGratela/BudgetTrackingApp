@@ -1,5 +1,6 @@
-import { format, isAfter, isSameMonth, startOfYear, subDays, subMonths } from "date-fns";
+import { format, isSameMonth, startOfYear, subDays, subMonths } from "date-fns";
 import type { SalaryPeriod, Transaction, TransactionFilters } from "@/types/transactions";
+import { roundMoney } from "@/lib/transactions";
 
 export const getUniqueCategories = (transactions: Transaction[]) =>
   Array.from(new Set(transactions.map((transaction) => transaction.category))).sort();
@@ -60,15 +61,15 @@ export const filterTransactions = (
     filtered = filtered.filter((transaction) => isSameMonth(new Date(transaction.created_at), lastMonth));
   } else if (selectedPeriod === "last-30-days") {
     const thirtyDaysAgo = subDays(now, 30);
-    filtered = filtered.filter((transaction) => isAfter(new Date(transaction.created_at), thirtyDaysAgo));
+    filtered = filtered.filter((transaction) => new Date(transaction.created_at).getTime() >= thirtyDaysAgo.getTime());
   } else if (selectedPeriod === "this-year") {
     const startOfThisYear = startOfYear(now);
-    filtered = filtered.filter((transaction) => isAfter(new Date(transaction.created_at), startOfThisYear));
+    filtered = filtered.filter((transaction) => new Date(transaction.created_at).getTime() >= startOfThisYear.getTime());
   } else if (selectedPeriod === "custom") {
     filtered = filtered.filter((transaction) => {
       const transactionDate = new Date(transaction.created_at);
-      const startDate = customStartDate ? new Date(`${customStartDate}T00:00:00`) : null;
-      const endDate = customEndDate ? new Date(`${customEndDate}T23:59:59`) : null;
+      const startDate = customStartDate ? new Date(`${customStartDate}T00:00:00.000Z`) : null;
+      const endDate = customEndDate ? new Date(`${customEndDate}T23:59:59.999Z`) : null;
 
       if (startDate && transactionDate < startDate) {
         return false;
@@ -164,25 +165,30 @@ export const buildSummary = (transactions: Transaction[]) => {
   });
 
   return {
-    total: income - expenses,
-    income,
-    expenses,
+    total: roundMoney(income - expenses),
+    income: roundMoney(income),
+    expenses: roundMoney(expenses),
   };
 };
 
 export const buildDailyData = (transactions: Transaction[]) => {
-  const map = new Map<string, { date: string; income: number; expense: number }>();
+  const map = new Map<string, { key: string; date: string; income: number; expense: number }>();
   const sorted = [...transactions].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
+  const labelFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", timeZone: "UTC" });
+
   sorted.forEach((transaction) => {
-    const date = format(new Date(transaction.created_at), "MMM dd");
-    if (!map.has(date)) {
-      map.set(date, { date, income: 0, expense: 0 });
+    const instant = new Date(transaction.created_at);
+    // Key by the full UTC calendar day so the same day-of-month across different
+    // months/years is not collapsed into one bar.
+    const key = instant.toISOString().slice(0, 10);
+    if (!map.has(key)) {
+      map.set(key, { key, date: labelFormatter.format(instant), income: 0, expense: 0 });
     }
 
-    const entry = map.get(date);
+    const entry = map.get(key);
     if (!entry) {
       return;
     }
@@ -196,7 +202,11 @@ export const buildDailyData = (transactions: Transaction[]) => {
     }
   });
 
-  return Array.from(map.values());
+  return Array.from(map.values()).map((entry) => ({
+    date: entry.date,
+    income: roundMoney(entry.income),
+    expense: roundMoney(entry.expense),
+  }));
 };
 
 export const buildCategoryData = (transactions: Transaction[]) => {
@@ -209,7 +219,7 @@ export const buildCategoryData = (transactions: Transaction[]) => {
       map.set(category, (map.get(category) || 0) + transaction.amount);
     });
 
-  return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
+  return Array.from(map.entries()).map(([name, value]) => ({ name, value: roundMoney(value) }));
 };
 
 export const buildInsights = (transactions: Transaction[]) => {
@@ -230,10 +240,16 @@ export const buildInsights = (transactions: Transaction[]) => {
     }
   });
 
-  return { topCategory, topAmount };
+  return { topCategory, topAmount: roundMoney(topAmount) };
 };
 
 export const escapeCsvValue = (value: string | number | null | undefined) => {
-  const stringValue = `${value ?? ""}`;
+  let stringValue = `${value ?? ""}`;
+  // Neutralize spreadsheet formula injection: a string cell starting with = + - @
+  // (or a control char) can execute when the CSV is opened in Excel/Sheets.
+  // Only guard strings — numbers (e.g. negative amounts) are never a vector.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(stringValue)) {
+    stringValue = `'${stringValue}`;
+  }
   return `"${stringValue.replace(/"/g, '""')}"`;
 };

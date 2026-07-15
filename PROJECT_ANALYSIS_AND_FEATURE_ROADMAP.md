@@ -256,6 +256,116 @@ It should be treated as a living document and updated as features are implemente
 - Budget rollover
 - Settings/profile enhancements
 
+### Phase 4: Future Considerations
+
+- Dedicated dashboard refinement and home-screen polish
+- Automatic recurring transaction generation
+- Merchant / payee field for transactions
+- Savings goal contribution history
+- Month-over-month financial insights
+- Smarter budgeting behavior and rollover improvements
+- Expanded profile and preferences
+- Better export and backup options
+- Receipt / attachment support
+- Shared or household budgeting
+
+## Phase 4 Suggestions
+
+These were identified as strong next-step opportunities after the current implemented phases.
+
+### 1. Automatic Recurring Transaction Generation
+
+#### Why it matters
+
+- Recurring templates already exist
+- The next high-value step is generating actual transactions automatically
+- This reduces manual tracking effort
+
+#### Scope
+
+- Generate transactions from recurring templates
+- Support weekly and monthly schedules
+- Avoid duplicate generation
+- Optionally implement via Supabase Edge Functions or scheduled jobs
+
+### 2. Merchant / Payee Tracking
+
+#### Why it matters
+
+- Real-world budgeting often depends on who the money was spent with
+- It improves search, analytics, and insight quality
+
+#### Scope
+
+- Add merchant or payee field to transactions
+- Support filtering by merchant
+- Use merchant data in analytics and summaries
+
+### 3. Savings Goal Contributions
+
+#### Why it matters
+
+- Current savings goals track totals directly
+- Contribution history would make savings progress more transparent and auditable
+
+#### Scope
+
+- Add contribution records per savings goal
+- Show contribution history
+- Calculate progress from contributions instead of only direct totals
+
+### 4. Month-over-Month Insights
+
+#### Why it matters
+
+- The app already supports alerts and analytics
+- Comparing one period to another would make insights more actionable
+
+#### Scope
+
+- Spending increase / decrease by category
+- Income comparisons across months or salary periods
+- Budget adherence summaries
+
+### 5. Better Export and Backup Options
+
+#### Why it matters
+
+- CSV export is already useful
+- More export options would improve portability and reporting
+
+#### Scope
+
+- PDF summaries
+- Monthly reports
+- JSON backup / restore
+
+### 6. Transaction Attachments
+
+#### Why it matters
+
+- Receipts and proof of payment are useful for expense tracking
+- This increases real-world practicality
+
+#### Scope
+
+- Upload receipt images using Supabase Storage
+- Attach files to transactions
+- View receipts from transaction history
+
+### 7. Shared / Household Budgets
+
+#### Why it matters
+
+- This would expand the app from solo budgeting to collaborative use cases
+- It introduces a higher-value multi-user product direction
+
+#### Scope
+
+- Invite another user
+- Shared categories and goals
+- Household-level dashboard and summaries
+
 ## Verification Notes
 
 The following checks were run during repository analysis:
@@ -295,12 +405,17 @@ After that, the highest-value strategic feature is:
 - Monthly budget rollover
 - Account and profile settings
 - Smart insights and alerts
+- Automatic recurring transaction generation
+- Merchant / payee tracking
+- Savings goal contribution history
+- Month-over-month insights
+- Better export and backup options
+- Transaction attachments
+- Shared / household budgets
 
 ### In Progress
 
-- Recurring transactions
-- Savings goals
-- Smart insights and alerts
+- (none)
 
 ### Completed
 
@@ -320,3 +435,20 @@ After that, the highest-value strategic feature is:
 - Custom categories
 - Advanced search and filters
 - Phase 3 Supabase setup SQL added
+- Recurring transactions
+- Savings goals
+- Smart insights and alerts
+
+### Correctness & Hardening Pass (2026-07)
+
+- Currency display now respects the user's preferred currency everywhere (shared `useFormatters` hook)
+- Fixed the duplicate "Savings" summary card (now a distinct savings-rate metric)
+- Standardized date handling on UTC (noon-UTC storage anchor, UTC month keys, year-aware daily chart, UTC custom-range boundaries, inclusive period edges)
+- Rounded monetary aggregations to cents to avoid float drift (`roundMoney` helper)
+- Hardened `getNextOccurrence` against malformed dates and bounded its loop
+- Closed the CSV formula-injection hole in export
+- Made budget-goal writes atomic via a Postgres RPC (`supabase_phase5_setup.sql`) with a safe fallback; added a `transactions(user_id, created_at)` index
+- Tightened missing-table detection to error codes only (stopped swallowing real errors)
+- Enabled `strictNullChecks` and added a `typecheck` script
+- Grew regression tests from 12 to 25; added project skills (`budgetflow-conventions`, `add-supabase-feature`, `write-tests`)
+- Cleanup: removed dead `Index.tsx` and `bun.lockb`, fixed `index.html` metadata/typos, repaired `.gitignore`

@@ -1,5 +1,5 @@
-import { format, subMonths } from "date-fns";
-import { DEFAULT_TRANSACTION_CATEGORIES, normalizeCategoryName } from "@/lib/transactions";
+import { subMonths } from "date-fns";
+import { DEFAULT_TRANSACTION_CATEGORIES, normalizeCategoryName, roundMoney } from "@/lib/transactions";
 import type { BudgetCategory, BudgetGoal, BudgetProgressItem } from "@/types/planning";
 import type { Transaction, TransactionType } from "@/types/transactions";
 
@@ -8,10 +8,23 @@ export const isMissingRelationError = (error: unknown) => {
     return false;
   }
 
-  const message = "message" in error ? String(error.message) : "";
+  // Match on the Postgres/PostgREST error codes for a missing table only.
+  // Substring matching on the message (e.g. "relation"/"categories") wrongly
+  // classified genuine errors as "table not set up" and swallowed them.
   const code = "code" in error ? String(error.code) : "";
 
-  return code === "42P01" || code === "PGRST205" || message.toLowerCase().includes("relation") || message.toLowerCase().includes("categories");
+  return code === "42P01" || code === "PGRST205";
+};
+
+export const isMissingFunctionError = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  // PGRST202: PostgREST can't find the function; 42883: Postgres undefined_function.
+  const code = "code" in error ? String(error.code) : "";
+
+  return code === "PGRST202" || code === "42883";
 };
 
 export const getDefaultCategories = (type?: TransactionType): BudgetCategory[] => {
@@ -53,11 +66,16 @@ export const normalizeBudgetGoal = (row: BudgetGoalRow): BudgetGoal => ({
   rollover_enabled: Boolean(row.rollover_enabled),
 });
 
-export const getMonthKey = (date = new Date()) => format(date, "yyyy-MM");
+export const getMonthKey = (date: Date | string = new Date()) => {
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  const year = parsed.getUTCFullYear();
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
 
 export const getPreviousMonthKey = (monthKey: string) => {
   const parsedDate = new Date(`${monthKey}-01T12:00:00.000Z`);
-  return format(subMonths(parsedDate, 1), "yyyy-MM");
+  return getMonthKey(subMonths(parsedDate, 1));
 };
 
 export const buildBudgetProgress = (
@@ -69,7 +87,7 @@ export const buildBudgetProgress = (
   const previousMonthKey = getPreviousMonthKey(monthKey);
   const spendByCategory = transactions
     .filter((transaction) => transaction.type === "expense")
-    .filter((transaction) => format(new Date(transaction.created_at), "yyyy-MM") === monthKey)
+    .filter((transaction) => getMonthKey(transaction.created_at) === monthKey)
     .reduce<Record<string, number>>((accumulator, transaction) => {
       accumulator[transaction.category] = (accumulator[transaction.category] || 0) + transaction.amount;
       return accumulator;
@@ -77,7 +95,7 @@ export const buildBudgetProgress = (
 
   const previousSpendByCategory = transactions
     .filter((transaction) => transaction.type === "expense")
-    .filter((transaction) => format(new Date(transaction.created_at), "yyyy-MM") === previousMonthKey)
+    .filter((transaction) => getMonthKey(transaction.created_at) === previousMonthKey)
     .reduce<Record<string, number>>((accumulator, transaction) => {
       accumulator[transaction.category] = (accumulator[transaction.category] || 0) + transaction.amount;
       return accumulator;
@@ -89,11 +107,12 @@ export const buildBudgetProgress = (
       const previousRemaining = matchingPreviousGoal
         ? matchingPreviousGoal.monthly_limit - (previousSpendByCategory[goal.category] || 0)
         : 0;
-      const carriedOver =
-        matchingPreviousGoal?.rollover_enabled && previousRemaining > 0 ? previousRemaining : 0;
-      const spent = spendByCategory[goal.category] || 0;
-      const effectiveLimit = goal.monthly_limit + carriedOver;
-      const remaining = effectiveLimit - spent;
+      const carriedOver = roundMoney(
+        matchingPreviousGoal?.rollover_enabled && previousRemaining > 0 ? previousRemaining : 0,
+      );
+      const spent = roundMoney(spendByCategory[goal.category] || 0);
+      const effectiveLimit = roundMoney(goal.monthly_limit + carriedOver);
+      const remaining = roundMoney(effectiveLimit - spent);
       const progress = effectiveLimit > 0 ? Math.min((spent / effectiveLimit) * 100, 100) : 0;
 
       return {

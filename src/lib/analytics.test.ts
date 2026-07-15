@@ -1,7 +1,9 @@
 import {
   buildCategoryData,
+  buildDailyData,
   buildInsights,
   buildSummary,
+  escapeCsvValue,
   filterTransactions,
   getSalaryPeriods,
   getUniqueCategories,
@@ -119,5 +121,44 @@ describe("analytics helpers", () => {
 
     expect(filtered).toHaveLength(1);
     expect(filtered[0].category).toBe("food");
+  });
+});
+
+describe("escapeCsvValue", () => {
+  it("neutralizes spreadsheet formula injection in string cells", () => {
+    expect(escapeCsvValue("=SUM(A1:A9)")).toBe(`"'=SUM(A1:A9)"`);
+    expect(escapeCsvValue("+1")).toBe(`"'+1"`);
+    expect(escapeCsvValue("@cmd")).toBe(`"'@cmd"`);
+  });
+
+  it("leaves normal strings and numeric amounts unchanged", () => {
+    expect(escapeCsvValue("Groceries")).toBe(`"Groceries"`);
+    expect(escapeCsvValue(-50)).toBe(`"-50"`);
+    expect(escapeCsvValue("2026-03-11")).toBe(`"2026-03-11"`);
+  });
+
+  it("still escapes embedded quotes", () => {
+    expect(escapeCsvValue('say "hi"')).toBe(`"say ""hi"""`);
+  });
+});
+
+describe("money and daily aggregation", () => {
+  it("rounds summed income to avoid binary float drift", () => {
+    const drift: Transaction[] = [
+      { id: "d1", user_id: "u", amount: 0.1, category: "salary", type: "income", description: null, created_at: "2026-03-01T12:00:00.000Z" },
+      { id: "d2", user_id: "u", amount: 0.2, category: "salary", type: "income", description: null, created_at: "2026-03-02T12:00:00.000Z" },
+    ];
+
+    expect(buildSummary(drift).income).toBe(0.3);
+  });
+
+  it("keeps the same day-of-month across different months as separate UTC points", () => {
+    const data = buildDailyData([
+      { id: "m1", user_id: "u", amount: 100, category: "food", type: "expense", description: null, created_at: "2026-02-05T12:00:00.000Z" },
+      { id: "m2", user_id: "u", amount: 200, category: "food", type: "expense", description: null, created_at: "2026-03-05T12:00:00.000Z" },
+    ]);
+
+    expect(data).toHaveLength(2);
+    expect(data[0].date).toBe("Feb 05");
   });
 });

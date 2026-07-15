@@ -34,12 +34,19 @@ export const buildTransactionPayload = (
   amount: Number(values.amount),
   category: values.category,
   description: values.description.trim() || null,
-  created_at: new Date(values.date).toISOString(),
+  created_at: new Date(`${values.date}T12:00:00.000Z`).toISOString(),
   type: values.type,
   user_id: userId,
 });
 
 export const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+
+/**
+ * Round a monetary value to whole cents, avoiding binary-float drift from naive
+ * accumulation (e.g. 0.1 + 0.2). Apply at aggregation boundaries — never compare
+ * raw summed floats. See the `budgetflow-conventions` skill.
+ */
+export const roundMoney = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
 
 export const normalizeCategoryName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 

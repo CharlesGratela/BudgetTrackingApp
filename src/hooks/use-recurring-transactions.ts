@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { getNextOccurrence, getRelationSetupError, normalizeRecurringTransaction } from "@/lib/phase3";
+import { isMissingFunctionError } from "@/lib/planning";
 import { normalizeCategoryName } from "@/lib/transactions";
+import { TRANSACTIONS_QUERY_KEY } from "@/hooks/use-transactions";
 import type { RecurringFrequency, RecurringTransaction } from "@/types/phase3";
-import type { TransactionType } from "@/types/transactions";
+import type { Transaction, TransactionType } from "@/types/transactions";
 
 const RECURRING_TRANSACTIONS_QUERY_KEY = "recurring-transactions";
 
@@ -95,6 +97,45 @@ export const useDeleteRecurringTransaction = (userId?: string) => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, userId] });
+    },
+  });
+};
+
+/**
+ * Materializes every recurring occurrence that is now due, via an atomic,
+ * idempotent Postgres function (supabase_phase6_setup.sql). Safe to fire on
+ * every load: re-runs are a no-op because next_occurrence is advanced. If the
+ * function isn't installed yet, this degrades to a no-op. Returns the created
+ * transactions.
+ */
+export const useGenerateDueRecurring = (userId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<Transaction[]> => {
+      if (!userId) {
+        return [];
+      }
+
+      const { data, error } = await supabase.rpc("generate_due_recurring_transactions", {});
+
+      if (error) {
+        if (isMissingFunctionError(error)) {
+          return [];
+        }
+        throw getRelationSetupError(error, "recurring_transactions", "supabase_phase3_setup.sql");
+      }
+
+      return (data ?? []) as Transaction[];
+    },
+    onSuccess: async (created) => {
+      if (created.length === 0) {
+        return;
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, userId] }),
+        queryClient.invalidateQueries({ queryKey: [TRANSACTIONS_QUERY_KEY, userId] }),
+      ]);
     },
   });
 };

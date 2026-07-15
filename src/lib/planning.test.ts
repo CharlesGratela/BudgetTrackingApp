@@ -1,4 +1,4 @@
-import { buildBudgetProgress, getMonthKey, mergeCategories } from "@/lib/planning";
+import { buildBudgetProgress, getMonthKey, isMissingFunctionError, isMissingRelationError, mergeCategories } from "@/lib/planning";
 import type { BudgetGoal } from "@/types/planning";
 import type { Transaction } from "@/types/transactions";
 
@@ -131,5 +131,26 @@ describe("planning helpers", () => {
 
   it("builds a month key", () => {
     expect(getMonthKey(new Date("2026-03-20T00:00:00.000Z"))).toBe("2026-03");
+  });
+
+  it("derives the month key in UTC (consistent with stored transaction dates)", () => {
+    expect(getMonthKey("2026-03-31T23:00:00.000Z")).toBe("2026-03");
+    expect(getMonthKey("2026-04-01T00:30:00.000Z")).toBe("2026-04");
+  });
+});
+
+describe("setup-error detection (by code, not message)", () => {
+  it("detects a missing table only by error code", () => {
+    expect(isMissingRelationError({ code: "42P01" })).toBe(true);
+    expect(isMissingRelationError({ code: "PGRST205" })).toBe(true);
+    // Message substrings must NOT be treated as "table not set up" anymore.
+    expect(isMissingRelationError({ message: "invalid input value for categories" })).toBe(false);
+    expect(isMissingRelationError(null)).toBe(false);
+  });
+
+  it("detects a missing function by code", () => {
+    expect(isMissingFunctionError({ code: "PGRST202" })).toBe(true);
+    expect(isMissingFunctionError({ code: "42883" })).toBe(true);
+    expect(isMissingFunctionError({ code: "42P01" })).toBe(false);
   });
 });

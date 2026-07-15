@@ -8,6 +8,7 @@ export interface Transaction {
   type: TransactionType;
   description: string | null;
   created_at: string;
+  recurring_transaction_id?: string | null;
 }
 
 export interface TransactionFormValues {

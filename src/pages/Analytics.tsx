@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { useBudgetGoals } from "@/hooks/use-budget-goals";
 import { useCategories } from "@/hooks/use-categories";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useFormatters } from "@/hooks/use-formatters";
+import { useAutoGenerateRecurring } from "@/hooks/use-auto-generate-recurring";
 import { useRecurringTransactions } from "@/hooks/use-recurring-transactions";
 import { useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useDeleteTransaction, useTransactions } from "@/hooks/use-transactions";
@@ -38,7 +40,7 @@ import {
   getUniqueCategories,
 } from "@/lib/analytics";
 import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
-import { formatCategoryLabel, formatCurrency } from "@/lib/transactions";
+import { formatCategoryLabel } from "@/lib/transactions";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import type { TransactionFilters } from "@/types/transactions";
 import { DollarSign, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
@@ -80,6 +82,8 @@ const Analytics = () => {
   const previousBudgetGoalsQuery = useBudgetGoals(user?.id, previousMonthKey);
   const recurringTransactionsQuery = useRecurringTransactions(user?.id);
   const savingsGoalsQuery = useSavingsGoals(user?.id);
+  const { formatMoney } = useFormatters(user?.id);
+  useAutoGenerateRecurring(user?.id);
   const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>("this-month");
@@ -221,11 +225,13 @@ const Analytics = () => {
     setCustomEndDate("");
   };
 
+  const savingsRate = summary.income > 0 ? ((summary.income - summary.expenses) / summary.income) * 100 : 0;
+
   const summaryCards = [
-    { label: "Total Balance", value: formatCurrency(summary.total), icon: DollarSign, trend: "", positive: summary.total >= 0 },
-    { label: "Income", value: formatCurrency(summary.income), icon: TrendingUp, trend: "", positive: true },
-    { label: "Expenses", value: formatCurrency(summary.expenses), icon: TrendingDown, trend: "", positive: false },
-    { label: "Savings", value: formatCurrency(summary.total), icon: PiggyBank, trend: "", positive: true },
+    { label: "Total Balance", value: formatMoney(summary.total), icon: DollarSign, trend: "", positive: summary.total >= 0 },
+    { label: "Income", value: formatMoney(summary.income), icon: TrendingUp, trend: "", positive: true },
+    { label: "Expenses", value: formatMoney(summary.expenses), icon: TrendingDown, trend: "", positive: false },
+    { label: "Savings Rate", value: `${Math.round(savingsRate)}%`, icon: PiggyBank, trend: "", positive: savingsRate >= 0 },
   ];
 
   const getPeriodLabel = () => {
@@ -428,7 +434,7 @@ const Analytics = () => {
             <p className="text-sm font-medium">
               Insight: Your biggest expense this period is{" "}
               <span className="font-bold">{safeCategoryLabel(insights.topCategory)}</span> at{" "}
-              <span className="font-bold">{formatCurrency(insights.topAmount)}</span>.
+              <span className="font-bold">{formatMoney(insights.topAmount)}</span>.
             </p>
           </motion.div>
         )}
@@ -507,7 +513,7 @@ const Analytics = () => {
                       <div className="text-right">
                         <div className={`font-semibold ${item.type === "income" ? "text-emerald-500" : "text-rose-500"}`}>
                           {item.type === "income" ? "+" : "-"}
-                          {formatCurrency(item.amount)}
+                          {formatMoney(item.amount)}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {format(new Date(item.next_occurrence), "MMM d")}
@@ -539,7 +545,7 @@ const Analytics = () => {
                       <div>
                         <div className="font-medium text-foreground">{goal.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatCurrency(goal.currentAmount)} of {formatCurrency(goal.targetAmount)}
+                          {formatMoney(goal.currentAmount)} of {formatMoney(goal.targetAmount)}
                         </div>
                       </div>
                       <div className="text-sm font-semibold text-muted-foreground">{goal.progress.toFixed(0)}%</div>
@@ -577,16 +583,16 @@ const Analytics = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="rounded-xl bg-muted/30 px-4 py-3">
                     <div className="text-sm text-muted-foreground">Budgeted</div>
-                    <div className="text-xl font-heading font-bold text-foreground">{formatCurrency(budgetTotals.totalBudget)}</div>
+                    <div className="text-xl font-heading font-bold text-foreground">{formatMoney(budgetTotals.totalBudget)}</div>
                   </div>
                   <div className="rounded-xl bg-muted/30 px-4 py-3">
                     <div className="text-sm text-muted-foreground">Spent</div>
-                    <div className="text-xl font-heading font-bold text-foreground">{formatCurrency(budgetTotals.totalSpent)}</div>
+                    <div className="text-xl font-heading font-bold text-foreground">{formatMoney(budgetTotals.totalSpent)}</div>
                   </div>
                   <div className="rounded-xl bg-muted/30 px-4 py-3">
                     <div className="text-sm text-muted-foreground">Remaining</div>
                     <div className={`text-xl font-heading font-bold ${budgetTotals.remaining >= 0 ? "text-foreground" : "text-rose-500"}`}>
-                      {formatCurrency(budgetTotals.remaining)}
+                      {formatMoney(budgetTotals.remaining)}
                     </div>
                   </div>
                 </div>
@@ -598,11 +604,11 @@ const Analytics = () => {
                         <div>
                           <div className="font-medium text-foreground">{safeCategoryLabel(item.category)}</div>
                           <div className="text-sm text-muted-foreground">
-                            {formatCurrency(item.spent)} spent of {formatCurrency(item.monthlyLimit)}
+                            {formatMoney(item.spent)} spent of {formatMoney(item.monthlyLimit)}
                           </div>
                         </div>
                         <div className={`text-sm font-semibold ${item.isOverBudget ? "text-rose-500" : "text-muted-foreground"}`}>
-                          {item.isOverBudget ? `${formatCurrency(Math.abs(item.remaining))} over` : `${formatCurrency(item.remaining)} left`}
+                          {item.isOverBudget ? `${formatMoney(Math.abs(item.remaining))} over` : `${formatMoney(item.remaining)} left`}
                         </div>
                       </div>
                       <Progress value={item.progress} className={item.isOverBudget ? "[&>div]:bg-rose-500" : "[&>div]:bg-primary"} />
@@ -789,7 +795,7 @@ const Analytics = () => {
 
                     <span className={`text-sm font-bold ${transaction.type === "income" ? "text-emerald-500" : "text-rose-500"}`}>
                       {transaction.type === "income" ? "+" : "-"}
-                      {formatCurrency(Math.abs(transaction.amount))}
+                      {formatMoney(Math.abs(transaction.amount))}
                     </span>
                   </div>
 

@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDeleteSavingsGoal, useSaveSavingsGoal, useSavingsGoals } from "@/hooks/use-savings-goals";
-import { formatCurrency } from "@/lib/transactions";
+import { useFormatters } from "@/hooks/use-formatters";
 import type { SavingsGoal } from "@/types/phase3";
 
 interface SavingsGoalsDialogProps {
@@ -34,6 +34,7 @@ const SavingsGoalsDialog = ({ open, onOpenChange, userId }: SavingsGoalsDialogPr
   const savingsGoalsQuery = useSavingsGoals(userId);
   const saveSavingsGoal = useSaveSavingsGoal(userId);
   const deleteSavingsGoal = useDeleteSavingsGoal(userId);
+  const { formatMoney } = useFormatters(userId);
 
   const handleSaveGoal = async () => {
     if (!formValues.name.trim() || !formValues.targetAmount) {
@@ -141,7 +142,7 @@ const SavingsGoalsDialog = ({ open, onOpenChange, userId }: SavingsGoalsDialogPr
                       <div>
                         <div className="font-medium text-foreground">{goal.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatCurrency(goal.current_amount)} saved of {formatCurrency(goal.target_amount)}
+                          {formatMoney(goal.current_amount)} saved of {formatMoney(goal.target_amount)}
                         </div>
                         {goal.target_date && (
                           <div className="mt-1 text-xs text-muted-foreground">Target {format(new Date(goal.target_date), "MMM d, yyyy")}</div>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +17,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCategories } from "@/hooks/use-categories";
 import {
   useDeleteRecurringTransaction,
+  useGenerateDueRecurring,
   useRecurringTransactions,
   useSaveRecurringTransaction,
 } from "@/hooks/use-recurring-transactions";
-import { formatCategoryLabel, formatCurrency } from "@/lib/transactions";
+import { formatCategoryLabel } from "@/lib/transactions";
+import { useFormatters } from "@/hooks/use-formatters";
 import type { RecurringFrequency, RecurringTransaction } from "@/types/phase3";
 import type { TransactionType } from "@/types/transactions";
 
@@ -51,6 +53,22 @@ const RecurringTransactionsDialog = ({
   const categoriesQuery = useCategories(userId, formValues.type);
   const saveRecurringTransaction = useSaveRecurringTransaction(userId);
   const deleteRecurringTransaction = useDeleteRecurringTransaction(userId);
+  const { formatMoney } = useFormatters(userId);
+  const generateDueRecurring = useGenerateDueRecurring(userId);
+
+  const handleGenerateDue = async () => {
+    try {
+      const created = await generateDueRecurring.mutateAsync();
+      toast.success(
+        created.length > 0
+          ? `Added ${created.length} recurring transaction${created.length === 1 ? "" : "s"}.`
+          : "No recurring transactions are due right now.",
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(message);
+    }
+  };
 
   const categoryOptions = useMemo(
     () => (categoriesQuery.data ?? []).map((category) => category.name),
@@ -97,8 +115,23 @@ const RecurringTransactionsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b border-border px-6 pt-6 pb-4 pr-12">
-          <DialogTitle>Recurring Transactions</DialogTitle>
-          <DialogDescription>Track recurring salary, bills, subscriptions, and other repeated entries.</DialogDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <DialogTitle>Recurring Transactions</DialogTitle>
+              <DialogDescription>Track recurring salary, bills, subscriptions, and other repeated entries.</DialogDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 self-start"
+              onClick={handleGenerateDue}
+              disabled={generateDueRecurring.isPending}
+            >
+              <Repeat className="h-4 w-4" />
+              {generateDueRecurring.isPending ? "Generating..." : "Generate due now"}
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -227,7 +260,7 @@ const RecurringTransactionsDialog = ({
                         <div className="font-medium text-foreground">{item.title}</div>
                         <div className="text-sm text-muted-foreground">
                           {item.type === "expense" ? "-" : "+"}
-                          {formatCurrency(item.amount)} | {formatCategoryLabel(item.category)}
+                          {formatMoney(item.amount)} | {formatCategoryLabel(item.category)}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {item.frequency === "weekly" ? "Weekly" : "Monthly"} | Next {format(new Date(item.next_occurrence), "MMM d, yyyy")}

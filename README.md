@@ -205,6 +205,8 @@ Then run:
 - [supabase_phase2_setup.sql](./supabase_phase2_setup.sql)
 - [supabase_phase3_setup.sql](./supabase_phase3_setup.sql)
 - [supabase_phase4_setup.sql](./supabase_phase4_setup.sql)
+- [supabase_phase5_setup.sql](./supabase_phase5_setup.sql)
+- [supabase_phase6_setup.sql](./supabase_phase6_setup.sql)
 
 These add support for:
 
@@ -214,6 +216,17 @@ These add support for:
 - savings goals
 - user preferences
 - budget rollover
+- a transactions index and atomic budget-goal writes (phase 5)
+- automatic recurring-transaction generation (phase 6)
+
+> Phase 5 is optional to run immediately: until it is applied, budget-goal saving
+> falls back to the previous (non-atomic) two-step write. Applying it makes the
+> write atomic and speeds up transaction queries.
+>
+> Phase 6 is likewise optional: until it is applied, automatic recurring
+> generation is a no-op. Applying it makes due recurring transactions
+> materialize automatically on dashboard load (and via the "Generate due now"
+> button in the recurring dialog).
 
 ## Scripts
 
@@ -271,6 +284,22 @@ Basic deployment flow:
 - the app is now centered around a mobile-first dashboard experience
 - analytics remains the deeper reporting screen
 - README now reflects the current implemented setup rather than the earlier MVP description
+
+## Future Considerations
+
+The following ideas are not the current implemented baseline, but they are strong candidates for future iterations:
+
+- automatic recurring transaction generation
+- merchant / payee tracking
+- savings goal contribution history
+- month-over-month insights
+- smarter export and backup options
+- receipt or attachment support
+- shared or household budgets
+
+These future features are tracked in more detail in:
+
+- [PROJECT_ANALYSIS_AND_FEATURE_ROADMAP.md](./PROJECT_ANALYSIS_AND_FEATURE_ROADMAP.md)
 
 ## License
 

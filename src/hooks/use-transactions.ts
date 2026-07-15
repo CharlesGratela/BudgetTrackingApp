@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { normalizeTransaction } from "@/lib/transactions";
 import type { Transaction, TransactionMutationInput } from "@/types/transactions";
 
-const TRANSACTIONS_QUERY_KEY = "transactions";
+export const TRANSACTIONS_QUERY_KEY = "transactions";
 
 export const useTransactions = (userId?: string) =>
   useQuery({

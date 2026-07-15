@@ -25,12 +25,13 @@ import { useBudgetGoals } from "@/hooks/use-budget-goals";
 import { useCategories } from "@/hooks/use-categories";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useRecurringTransactions } from "@/hooks/use-recurring-transactions";
+import { useAutoGenerateRecurring } from "@/hooks/use-auto-generate-recurring";
 import { useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { buildSummary } from "@/lib/analytics";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
-import { formatDateWithPreferences, formatMoneyWithPreferences } from "@/lib/preferences";
+import { useFormatters } from "@/hooks/use-formatters";
 import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
 import { formatCategoryLabel } from "@/lib/transactions";
 
@@ -102,14 +103,9 @@ const DashboardOverview = () => {
     () => buildSavingsProgress(savingsGoalsQuery.data ?? []),
     [savingsGoalsQuery.data],
   );
-  const preferences = preferencesQuery.data;
-  const formatMoney = (value: number) =>
-    preferences ? formatMoneyWithPreferences(value, preferences) : formatMoneyWithPreferences(value, {
-      preferred_currency: "USD",
-      locale: "en-US",
-    });
-  const formatDate = (value: string | Date, options?: Intl.DateTimeFormatOptions) =>
-    preferences ? formatDateWithPreferences(value, preferences, options) : formatDateWithPreferences(value, { locale: "en-US" }, options);
+  const { formatMoney, formatDate } = useFormatters(user?.id);
+
+  useAutoGenerateRecurring(user?.id);
   const savingsProgress = useMemo(() => allSavingsProgress.slice(0, 3), [allSavingsProgress]);
   const smartAlerts = useMemo(
     () =>
