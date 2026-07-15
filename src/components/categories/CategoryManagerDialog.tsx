@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAddCategory, useCategories, useDeleteCategory } from "@/hooks/use-categories";
+import { useAddCategory, useCategories, useDeleteCategory, useRenameCategory } from "@/hooks/use-categories";
 import { formatCategoryLabel, normalizeCategoryName } from "@/lib/transactions";
 import type { TransactionType } from "@/types/transactions";
 
@@ -38,6 +38,9 @@ const CategoryManagerDialog = ({
   const incomeCategoriesQuery = useCategories(userId, "income");
   const addCategory = useAddCategory(userId);
   const deleteCategory = useDeleteCategory(userId);
+  const renameCategory = useRenameCategory(userId);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   const categoriesByType = useMemo(
     () => ({
@@ -78,6 +81,25 @@ const CategoryManagerDialog = ({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       toast.error(message);
+    }
+  };
+
+  const handleRename = async (type: TransactionType, oldName: string) => {
+    const newName = normalizeCategoryName(editName);
+    if (!newName) {
+      toast.error("Enter a category name.");
+      return;
+    }
+    if (newName === oldName) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      await renameCategory.mutateAsync({ type, oldName, newName });
+      setEditingId(null);
+      toast.success("Category renamed everywhere.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Rename failed.");
     }
   };
 
@@ -125,22 +147,58 @@ const CategoryManagerDialog = ({
                   {categoriesByType[type].map((category) => (
                     <div
                       key={category.id}
-                      className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2"
+                      className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2"
                     >
-                      <span className="text-sm font-medium text-foreground">{formatCategoryLabel(category.name)}</span>
-                      {category.isDefault ? (
-                        <span className="text-xs text-muted-foreground">Default</span>
+                      {editingId === category.id ? (
+                        <>
+                          <Input
+                            aria-label="New category name"
+                            className="h-8"
+                            value={editName}
+                            onChange={(event) => setEditName(event.target.value)}
+                          />
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleRename(category.type, category.name)} aria-label="Save name">
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setEditingId(null)} aria-label="Cancel rename">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </>
                       ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-rose-500"
-                          onClick={() => handleDeleteCategory(category.id, category.name)}
-                          aria-label={`Delete ${formatCategoryLabel(category.name)}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <span className="text-sm font-medium text-foreground">{formatCategoryLabel(category.name)}</span>
+                          {category.isDefault ? (
+                            <span className="text-xs text-muted-foreground">Default</span>
+                          ) : (
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                onClick={() => {
+                                  setEditingId(category.id);
+                                  setEditName(category.name);
+                                }}
+                                aria-label={`Rename ${formatCategoryLabel(category.name)}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                                onClick={() => handleDeleteCategory(category.id, category.name)}
+                                aria-label={`Delete ${formatCategoryLabel(category.name)}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   ))}

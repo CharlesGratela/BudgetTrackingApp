@@ -213,6 +213,7 @@ Then run:
 - [supabase_phase10_setup.sql](./supabase_phase10_setup.sql)
 - [supabase_phase11_setup.sql](./supabase_phase11_setup.sql)
 - [supabase_phase12_setup.sql](./supabase_phase12_setup.sql)
+- [supabase_phase13_setup.sql](./supabase_phase13_setup.sql)
 
 These add support for:
 
@@ -230,6 +231,7 @@ These add support for:
 - merchant / payee on transactions (phase 10)
 - transaction receipts via Supabase Storage (phase 11)
 - emailed bill reminders (phase 12 + the send-notifications Edge Function)
+- category rename that cascades to all transactions/budgets/recurring (phase 13)
 
 > Phase 5 is optional to run immediately: until it is applied, budget-goal saving
 > falls back to the previous (non-atomic) two-step write. Applying it makes the
