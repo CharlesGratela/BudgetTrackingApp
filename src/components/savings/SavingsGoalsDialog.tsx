@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDeleteSavingsGoal, useSaveSavingsGoal, useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useFormatters } from "@/hooks/use-formatters";
+import SavingsGoalContributions from "@/components/savings/SavingsGoalContributions";
 import type { SavingsGoal } from "@/types/phase3";
 
 interface SavingsGoalsDialogProps {
@@ -31,6 +32,7 @@ const initialFormState = {
 
 const SavingsGoalsDialog = ({ open, onOpenChange, userId }: SavingsGoalsDialogProps) => {
   const [formValues, setFormValues] = useState(initialFormState);
+  const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
   const savingsGoalsQuery = useSavingsGoals(userId);
   const saveSavingsGoal = useSaveSavingsGoal(userId);
   const deleteSavingsGoal = useDeleteSavingsGoal(userId);
@@ -148,16 +150,32 @@ const SavingsGoalsDialog = ({ open, onOpenChange, userId }: SavingsGoalsDialogPr
                           <div className="mt-1 text-xs text-muted-foreground">Target {format(new Date(goal.target_date), "MMM d, yyyy")}</div>
                         )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-rose-500"
-                        onClick={() => handleDelete(goal)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => setExpandedGoalId(expandedGoalId === goal.id ? null : goal.id)}
+                          aria-expanded={expandedGoalId === goal.id}
+                        >
+                          {expandedGoalId === goal.id ? "Hide" : "Contributions"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                          onClick={() => handleDelete(goal)}
+                          aria-label="Delete savings goal"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
+                    {expandedGoalId === goal.id && (
+                      <SavingsGoalContributions userId={userId} goalId={goal.id} formatMoney={formatMoney} />
+                    )}
                   </div>
                 ))
               )}

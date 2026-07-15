@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { getRelationSetupError, normalizeSavingsGoal } from "@/lib/phase3";
 import type { SavingsGoal } from "@/types/phase3";
 
-const SAVINGS_GOALS_QUERY_KEY = "savings-goals";
+export const SAVINGS_GOALS_QUERY_KEY = "savings-goals";
 
 export const useSavingsGoals = (userId?: string) =>
   useQuery({

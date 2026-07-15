@@ -27,6 +27,15 @@ export interface SavingsGoal {
   created_at: string;
 }
 
+export interface SavingsContribution {
+  id: string;
+  user_id: string;
+  savings_goal_id: string;
+  amount: number;
+  note: string | null;
+  created_at: string;
+}
+
 export interface SavingsGoalProgress {
   id: string;
   name: string;

@@ -3,7 +3,7 @@ import { DEFAULT_USER_PREFERENCES, formatMoneyWithPreferences } from "@/lib/pref
 import { isMissingRelationError } from "@/lib/planning";
 import { formatCategoryLabel, roundMoney } from "@/lib/transactions";
 import type { BudgetProgressItem } from "@/types/planning";
-import type { RecurringFrequency, RecurringTransaction, SavingsGoal, SavingsGoalProgress, SmartAlert } from "@/types/phase3";
+import type { RecurringFrequency, RecurringTransaction, SavingsContribution, SavingsGoal, SavingsGoalProgress, SmartAlert } from "@/types/phase3";
 import type { UserPreferences } from "@/types/preferences";
 import type { Transaction } from "@/types/transactions";
 
@@ -27,6 +27,13 @@ export const normalizeSavingsGoal = (row: SavingsRow): SavingsGoal => ({
   ...row,
   target_amount: Number(row.target_amount),
   current_amount: Number(row.current_amount),
+});
+
+export const normalizeSavingsContribution = (
+  row: Omit<SavingsContribution, "amount"> & { amount: number | string },
+): SavingsContribution => ({
+  ...row,
+  amount: Number(row.amount),
 });
 
 export const getNextOccurrence = (startDate: string, frequency: RecurringFrequency, now = new Date()) => {
