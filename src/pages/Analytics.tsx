@@ -41,6 +41,7 @@ import {
 } from "@/lib/analytics";
 import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
 import { formatCategoryLabel } from "@/lib/transactions";
+import { openPrintReport } from "@/lib/report";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import type { TransactionFilters } from "@/types/transactions";
 import { DollarSign, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
@@ -246,6 +247,20 @@ const Analytics = () => {
     return "this period";
   };
 
+  const handlePrintReport = () => {
+    openPrintReport({
+      periodLabel: `Period: ${getPeriodLabel()}`,
+      generatedOn: format(new Date(), "PPP"),
+      metrics: [
+        { label: "Income", value: formatMoney(summary.income) },
+        { label: "Expenses", value: formatMoney(summary.expenses) },
+        { label: "Net", value: formatMoney(summary.total) },
+        { label: "Savings rate", value: `${Math.round(savingsRate)}%` },
+      ],
+      categories: categoryData.map((entry) => ({ name: safeCategoryLabel(entry.name), value: formatMoney(entry.value) })),
+    });
+  };
+
   if (isCheckingAuth || transactionsQuery.isLoading) {
     return (
       <div className="min-h-screen bg-background pt-20 pb-24 md:pb-12 relative">
@@ -288,6 +303,10 @@ const Analytics = () => {
                     Overview
                   </Button>
                 </Link>
+                <Button variant="outline" size="sm" className="gap-2" onClick={handlePrintReport}>
+                  <Download className="w-4 h-4" />
+                  Print
+                </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
                   <Settings2 className="w-4 h-4" />
                   Manage Categories

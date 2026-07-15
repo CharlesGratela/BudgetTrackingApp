@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useSaveUserPreferences, useUserPreferences } from "@/hooks/use-user-preferences";
+import { useExportBackup, useImportTransactions } from "@/hooks/use-backup";
+import { readBackupTransactions } from "@/lib/backup";
 import { DEFAULT_USER_PREFERENCES } from "@/lib/preferences";
 import type { UserPreferencesInput } from "@/types/preferences";
 
@@ -28,6 +30,37 @@ const UserPreferencesDialog = ({
 }: UserPreferencesDialogProps) => {
   const preferencesQuery = useUserPreferences(userId);
   const savePreferences = useSaveUserPreferences(userId);
+  const exportBackup = useExportBackup(userId);
+  const importTransactions = useImportTransactions(userId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    try {
+      await exportBackup.mutateAsync();
+      toast.success("Backup downloaded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Export failed.");
+    }
+  };
+
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    if (!window.confirm("Import transactions from this backup? They are ADDED to your existing data (no overwrite).")) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(await file.text());
+      const rows = readBackupTransactions(parsed);
+      const count = await importTransactions.mutateAsync(rows);
+      toast.success(count > 0 ? `Imported ${count} transaction${count === 1 ? "" : "s"}.` : "No transactions found in that file.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Import failed.");
+    }
+  };
   const [values, setValues] = useState<UserPreferencesInput>(DEFAULT_USER_PREFERENCES);
 
   useEffect(() => {
@@ -182,6 +215,34 @@ const UserPreferencesDialog = ({
                 checked={values.savings_alerts_enabled}
                 onCheckedChange={(checked) => setValues((current) => ({ ...current, savings_alerts_enabled: checked }))}
               />
+            </div>
+
+            <div className="space-y-3 border-t border-border pt-4">
+              <div>
+                <Label>Data</Label>
+                <p className="text-sm text-muted-foreground">Download a full JSON backup, or import transactions from one.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={handleExport} disabled={exportBackup.isPending}>
+                  Download backup (.json)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importTransactions.isPending}
+                >
+                  Import transactions
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={handleImportFile}
+                />
+              </div>
             </div>
           </div>
           </div>
