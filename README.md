@@ -207,6 +207,7 @@ Then run:
 - [supabase_phase4_setup.sql](./supabase_phase4_setup.sql)
 - [supabase_phase5_setup.sql](./supabase_phase5_setup.sql)
 - [supabase_phase6_setup.sql](./supabase_phase6_setup.sql)
+- [supabase_phase7_setup.sql](./supabase_phase7_setup.sql)
 
 These add support for:
 
@@ -218,6 +219,7 @@ These add support for:
 - budget rollover
 - a transactions index and atomic budget-goal writes (phase 5)
 - automatic recurring-transaction generation (phase 6)
+- scheduled server-side recurring generation (phase 7)
 
 > Phase 5 is optional to run immediately: until it is applied, budget-goal saving
 > falls back to the previous (non-atomic) two-step write. Applying it makes the
@@ -227,6 +229,12 @@ These add support for:
 > generation is a no-op. Applying it makes due recurring transactions
 > materialize automatically on dashboard load (and via the "Generate due now"
 > button in the recurring dialog).
+>
+> Phase 7 adds scheduled server-side generation so recurring items materialize
+> even when nobody is logged in. It creates a batch function and schedules it
+> hourly with pg_cron (Option A). Alternatively deploy the Edge Function in
+> `supabase/functions/generate-recurring` and schedule that (Option B) — use one
+> trigger, not both.
 
 ## Scripts
 
