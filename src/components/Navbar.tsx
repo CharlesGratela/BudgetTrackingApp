@@ -97,6 +97,8 @@ const Navbar = () => {
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className={isLanding ? "text-primary-foreground" : "text-foreground"}
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileOpen}
               >
                 {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>

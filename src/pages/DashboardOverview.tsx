@@ -507,6 +507,7 @@ const DashboardOverview = () => {
           size="icon"
           className="h-14 w-14 rounded-full shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/40"
           onClick={() => navigate("/add-transaction")}
+          aria-label="Add transaction"
         >
           <Plus className="h-6 w-6" />
         </Button>

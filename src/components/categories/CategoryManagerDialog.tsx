@@ -100,6 +100,7 @@ const CategoryManagerDialog = ({
               <TabsContent key={type} value={type} className="space-y-4">
                 <div className="flex gap-2">
                   <Input
+                    aria-label={`Add ${type} category`}
                     placeholder={`Add ${type} category`}
                     value={drafts[type]}
                     onChange={(event) =>
@@ -136,6 +137,7 @@ const CategoryManagerDialog = ({
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-rose-500"
                           onClick={() => handleDeleteCategory(category.id, category.name)}
+                          aria-label={`Delete ${formatCategoryLabel(category.name)}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

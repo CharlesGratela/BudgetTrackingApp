@@ -848,6 +848,7 @@ const Analytics = () => {
                               event.stopPropagation();
                               navigate(`/transactions/${transaction.id}/edit`);
                             }}
+                            aria-label="Edit transaction"
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -859,6 +860,7 @@ const Analytics = () => {
                               event.stopPropagation();
                               handleDelete(transaction.id);
                             }}
+                            aria-label="Delete transaction"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -892,6 +894,7 @@ const Analytics = () => {
           size="icon"
           className="h-14 w-14 rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
           onClick={() => navigate("/add-transaction")}
+          aria-label="Add transaction"
         >
           <Plus className="h-6 w-6" />
         </Button>
