@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
 import { useCategories } from "@/hooks/use-categories";
 import { useMerchants } from "@/hooks/use-merchants";
+import { useAccounts } from "@/hooks/use-accounts";
 import { uploadReceipt } from "@/lib/receipts";
 import { toast } from "sonner";
 import { DEFAULT_TRANSACTION_CATEGORIES, formatCategoryLabel } from "@/lib/transactions";
@@ -21,6 +22,7 @@ const getDefaultValues = (): TransactionFormValues => ({
   description: "",
   merchant: "",
   receiptPath: "",
+  accountId: "",
   date: new Date().toISOString().split("T")[0],
 });
 
@@ -47,6 +49,7 @@ const TransactionForm = ({
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const categoriesQuery = useCategories(userId, values.type);
   const merchantsQuery = useMerchants(userId);
+  const accountsQuery = useAccounts(userId);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   const handleReceiptChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +75,13 @@ const TransactionForm = ({
       setValues(initialValues);
     }
   }, [initialValues]);
+
+  useEffect(() => {
+    const accounts = accountsQuery.data;
+    if (accounts && accounts.length > 0) {
+      setValues((current) => (current.accountId ? current : { ...current, accountId: accounts[0].id }));
+    }
+  }, [accountsQuery.data]);
 
   const availableCategories = useMemo(() => {
     const categoryNames = new Set(
@@ -174,6 +184,27 @@ const TransactionForm = ({
                   className="h-11"
                 />
               </div>
+
+              {(accountsQuery.data?.length ?? 0) > 0 && (
+                <div className="space-y-2">
+                  <Label>Account</Label>
+                  <Select
+                    value={values.accountId}
+                    onValueChange={(accountId) => setValues((current) => ({ ...current, accountId }))}
+                  >
+                    <SelectTrigger className="h-11" aria-label="Account">
+                      <SelectValue placeholder="Select account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(accountsQuery.data ?? []).map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">

@@ -19,6 +19,7 @@ import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog
 import RecurringTransactionsDialog from "@/components/recurring/RecurringTransactionsDialog";
 import SavingsGoalsDialog from "@/components/savings/SavingsGoalsDialog";
 import MonthComparisonCard from "@/components/insights/MonthComparisonCard";
+import AccountsDialog from "@/components/accounts/AccountsDialog";
 import UserPreferencesDialog from "@/components/settings/UserPreferencesDialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +33,8 @@ import { useTransactions } from "@/hooks/use-transactions";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { buildSummary } from "@/lib/analytics";
 import { buildMonthComparison } from "@/lib/insights";
+import { useAccounts } from "@/hooks/use-accounts";
+import { buildAccountBalances, buildNetWorth } from "@/lib/accounts";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import { useFormatters } from "@/hooks/use-formatters";
 import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
@@ -53,6 +56,7 @@ const DashboardOverview = () => {
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false);
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState(false);
   const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
+  const [isAccountsDialogOpen, setIsAccountsDialogOpen] = useState(false);
 
   const transactionsQuery = useTransactions(user?.id);
   const categoriesQuery = useCategories(user?.id);
@@ -63,6 +67,7 @@ const DashboardOverview = () => {
   const previousBudgetGoalsQuery = useBudgetGoals(user?.id, previousMonthKey);
   const recurringTransactionsQuery = useRecurringTransactions(user?.id);
   const savingsGoalsQuery = useSavingsGoals(user?.id);
+  const accountsQuery = useAccounts(user?.id);
 
   const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
   const currentMonthTransactions = useMemo(
@@ -72,6 +77,11 @@ const DashboardOverview = () => {
   const allTimeSummary = useMemo(() => buildSummary(transactions), [transactions]);
   const monthSummary = useMemo(() => buildSummary(currentMonthTransactions), [currentMonthTransactions]);
   const monthComparison = useMemo(() => buildMonthComparison(transactions, monthKey), [transactions, monthKey]);
+  const accountBalances = useMemo(
+    () => buildAccountBalances(accountsQuery.data ?? [], transactions),
+    [accountsQuery.data, transactions],
+  );
+  const netWorthTotal = useMemo(() => buildNetWorth(accountBalances), [accountBalances]);
   const expenseCategories = useMemo(
     () =>
       (categoriesQuery.data ?? [])
@@ -255,6 +265,35 @@ const DashboardOverview = () => {
                 <div className="mt-1 text-xs text-muted-foreground">{card.caption}</div>
               </motion.div>
             ))}
+          </section>
+
+          <section className="rounded-3xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-heading text-lg font-semibold text-foreground">Net Worth</h2>
+                <p className="text-sm text-muted-foreground">Balances across your accounts.</p>
+              </div>
+              <div className="text-right">
+                <div className="font-heading text-2xl font-bold text-foreground">{formatMoney(netWorthTotal)}</div>
+                <Button variant="ghost" size="sm" onClick={() => setIsAccountsDialogOpen(true)}>
+                  Manage
+                </Button>
+              </div>
+            </div>
+            {accountBalances.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No accounts yet. Add one to track balances and net worth.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {accountBalances.map((account) => (
+                  <div key={account.id} className="rounded-xl bg-muted/30 px-3 py-2">
+                    <div className="text-xs text-muted-foreground">{account.name}</div>
+                    <div className={`font-heading text-lg font-bold ${account.balance < 0 ? "text-rose-500" : "text-foreground"}`}>
+                      {formatMoney(account.balance)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.3fr_0.7fr]">
@@ -501,6 +540,8 @@ const DashboardOverview = () => {
           </div>
         </div>
       </div>
+
+      <AccountsDialog open={isAccountsDialogOpen} onOpenChange={setIsAccountsDialogOpen} userId={user?.id} />
 
       <div className="fixed bottom-6 right-6 z-50 md:hidden">
         <Button

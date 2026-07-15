@@ -13,7 +13,7 @@ describe("roundMoney", () => {
 describe("buildTransactionPayload", () => {
   it("anchors the picked date at noon UTC so it does not roll back a day", () => {
     const payload = buildTransactionPayload(
-      { amount: "12.50", category: "food", description: "  Lunch  ", merchant: "  Cafe  ", receiptPath: "", date: "2026-03-11", type: "expense" },
+      { amount: "12.50", category: "food", description: "  Lunch  ", merchant: "  Cafe  ", receiptPath: "", accountId: "", date: "2026-03-11", type: "expense" },
       "user-1",
     );
 
