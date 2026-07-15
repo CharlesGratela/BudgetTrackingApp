@@ -18,6 +18,7 @@ import BudgetGoalsDialog from "@/components/budgets/BudgetGoalsDialog";
 import CategoryManagerDialog from "@/components/categories/CategoryManagerDialog";
 import RecurringTransactionsDialog from "@/components/recurring/RecurringTransactionsDialog";
 import SavingsGoalsDialog from "@/components/savings/SavingsGoalsDialog";
+import MonthComparisonCard from "@/components/insights/MonthComparisonCard";
 import UserPreferencesDialog from "@/components/settings/UserPreferencesDialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +31,7 @@ import { useSavingsGoals } from "@/hooks/use-savings-goals";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { buildSummary } from "@/lib/analytics";
+import { buildMonthComparison } from "@/lib/insights";
 import { buildSavingsProgress, buildSmartAlerts } from "@/lib/phase3";
 import { useFormatters } from "@/hooks/use-formatters";
 import { buildBudgetProgress, getMonthKey, getPreviousMonthKey } from "@/lib/planning";
@@ -69,6 +71,7 @@ const DashboardOverview = () => {
   );
   const allTimeSummary = useMemo(() => buildSummary(transactions), [transactions]);
   const monthSummary = useMemo(() => buildSummary(currentMonthTransactions), [currentMonthTransactions]);
+  const monthComparison = useMemo(() => buildMonthComparison(transactions, monthKey), [transactions, monthKey]);
   const expenseCategories = useMemo(
     () =>
       (categoriesQuery.data ?? [])
@@ -283,6 +286,8 @@ const DashboardOverview = () => {
                   )}
                 </div>
               </section>
+
+              <MonthComparisonCard comparison={monthComparison} formatMoney={formatMoney} />
 
               <section className="rounded-3xl border border-border bg-card p-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
