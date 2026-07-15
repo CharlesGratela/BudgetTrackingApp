@@ -45,7 +45,9 @@ begin
 end;
 $$;
 
-revoke execute on function public.generate_all_due_recurring_transactions(timestamptz) from anon, authenticated;
+-- Postgres grants EXECUTE to `public` by default on every new function, so we
+-- must revoke from public (not just anon/authenticated) to truly lock it down.
+revoke execute on function public.generate_all_due_recurring_transactions(timestamptz) from public;
 grant execute on function public.generate_all_due_recurring_transactions(timestamptz) to service_role;
 
 -- 2. OPTION A (recommended): schedule directly with pg_cron. Pure-DB, no HTTP,
