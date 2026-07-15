@@ -107,6 +107,7 @@ Note:
 - Framer Motion
 - React Router
 - Vitest
+- PWA (installable + offline app shell, via vite-plugin-pwa)
 
 ## Routes
 
