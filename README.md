@@ -209,6 +209,7 @@ Then run:
 - [supabase_phase6_setup.sql](./supabase_phase6_setup.sql)
 - [supabase_phase7_setup.sql](./supabase_phase7_setup.sql)
 - [supabase_phase8_setup.sql](./supabase_phase8_setup.sql)
+- [supabase_phase9_setup.sql](./supabase_phase9_setup.sql)
 
 These add support for:
 
@@ -222,6 +223,7 @@ These add support for:
 - automatic recurring-transaction generation (phase 6)
 - scheduled server-side recurring generation (phase 7)
 - savings-goal contributions with history (phase 8)
+- recurring end dates, skip, and upcoming preview (phase 9)
 
 > Phase 5 is optional to run immediately: until it is applied, budget-goal saving
 > falls back to the previous (non-atomic) two-step write. Applying it makes the

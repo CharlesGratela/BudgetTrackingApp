@@ -1,4 +1,4 @@
-import { buildSavingsProgress, buildSmartAlerts, getNextOccurrence } from "@/lib/phase3";
+import { buildSavingsProgress, buildSmartAlerts, getNextOccurrence, getUpcomingOccurrences } from "@/lib/phase3";
 import type { BudgetProgressItem } from "@/types/planning";
 import type { RecurringTransaction, SavingsGoal } from "@/types/phase3";
 import type { Transaction } from "@/types/transactions";
@@ -29,6 +29,7 @@ const recurringTransactions: RecurringTransaction[] = [
     frequency: "monthly",
     start_date: "2026-03-01",
     next_occurrence: "2026-03-22T00:00:00.000Z",
+    end_date: null,
     is_active: true,
     created_at: "2026-03-01T00:00:00.000Z",
   },
@@ -74,6 +75,17 @@ describe("phase 3 helpers", () => {
     const now = new Date("2026-03-20T00:00:00.000Z");
     const next = new Date(getNextOccurrence("2026-03-01", "weekly", now));
     expect(next.getTime()).toBeGreaterThanOrEqual(now.getTime());
+  });
+
+  it("previews upcoming occurrences and respects the end date", () => {
+    const upcoming = getUpcomingOccurrences("2026-03-01T12:00:00.000Z", "weekly", 4);
+    expect(upcoming).toHaveLength(4);
+    expect(upcoming[0].startsWith("2026-03-01")).toBe(true);
+    expect(upcoming[1].startsWith("2026-03-08")).toBe(true);
+
+    // Weekly from Mar 1 capped at Mar 15 -> Mar 1, 8, 15 (Mar 22 is past the end).
+    const capped = getUpcomingOccurrences("2026-03-01T12:00:00.000Z", "weekly", 10, "2026-03-15");
+    expect(capped).toHaveLength(3);
   });
 
   it("builds savings progress", () => {

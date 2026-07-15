@@ -20,8 +20,10 @@ import {
   useGenerateDueRecurring,
   useRecurringTransactions,
   useSaveRecurringTransaction,
+  useSkipRecurringOccurrence,
 } from "@/hooks/use-recurring-transactions";
 import { formatCategoryLabel } from "@/lib/transactions";
+import { getUpcomingOccurrences } from "@/lib/phase3";
 import { useFormatters } from "@/hooks/use-formatters";
 import type { RecurringFrequency, RecurringTransaction } from "@/types/phase3";
 import type { TransactionType } from "@/types/transactions";
@@ -40,6 +42,7 @@ const initialFormState = {
   description: "",
   frequency: "monthly" as RecurringFrequency,
   startDate: new Date().toISOString().split("T")[0],
+  endDate: "",
   isActive: true,
 };
 
@@ -55,6 +58,7 @@ const RecurringTransactionsDialog = ({
   const deleteRecurringTransaction = useDeleteRecurringTransaction(userId);
   const { formatMoney } = useFormatters(userId);
   const generateDueRecurring = useGenerateDueRecurring(userId);
+  const skipOccurrence = useSkipRecurringOccurrence(userId);
 
   const handleGenerateDue = async () => {
     try {
@@ -64,6 +68,16 @@ const RecurringTransactionsDialog = ({
           ? `Added ${created.length} recurring transaction${created.length === 1 ? "" : "s"}.`
           : "No recurring transactions are due right now.",
       );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(message);
+    }
+  };
+
+  const handleSkip = async (item: RecurringTransaction) => {
+    try {
+      await skipOccurrence.mutateAsync({ id: item.id, nextOccurrence: item.next_occurrence, frequency: item.frequency });
+      toast.success("Skipped to the next occurrence.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       toast.error(message);
@@ -90,6 +104,7 @@ const RecurringTransactionsDialog = ({
         description: formValues.description,
         frequency: formValues.frequency,
         startDate: formValues.startDate,
+        endDate: formValues.endDate || undefined,
         isActive: formValues.isActive,
       });
 
@@ -220,14 +235,26 @@ const RecurringTransactionsDialog = ({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="recurring-start">Start Date</Label>
-                <Input
-                  id="recurring-start"
-                  type="date"
-                  value={formValues.startDate}
-                  onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, startDate: event.target.value }))}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="recurring-start">Start Date</Label>
+                  <Input
+                    id="recurring-start"
+                    type="date"
+                    value={formValues.startDate}
+                    onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, startDate: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recurring-end">End Date (optional)</Label>
+                  <Input
+                    id="recurring-end"
+                    type="date"
+                    value={formValues.endDate}
+                    min={formValues.startDate}
+                    onChange={(event) => setFormValues((currentValue) => ({ ...currentValue, endDate: event.target.value }))}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -264,17 +291,37 @@ const RecurringTransactionsDialog = ({
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {item.frequency === "weekly" ? "Weekly" : "Monthly"} | Next {format(new Date(item.next_occurrence), "MMM d, yyyy")}
+                          {item.end_date && <> | Ends {format(new Date(`${item.end_date}T12:00:00.000Z`), "MMM d, yyyy")}</>}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground/80">
+                          Upcoming:{" "}
+                          {getUpcomingOccurrences(item.next_occurrence, item.frequency, 3, item.end_date)
+                            .map((iso) => format(new Date(iso), "MMM d"))
+                            .join(", ") || "none"}
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-rose-500"
-                        onClick={() => handleDelete(item)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => handleSkip(item)}
+                          disabled={skipOccurrence.isPending}
+                        >
+                          Skip
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                          onClick={() => handleDelete(item)}
+                          aria-label="Delete recurring transaction"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))

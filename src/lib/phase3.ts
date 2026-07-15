@@ -58,6 +58,35 @@ export const getNextOccurrence = (startDate: string, frequency: RecurringFrequen
   return nextDate.toISOString();
 };
 
+/**
+ * The next `count` occurrence timestamps starting at `nextOccurrence`, stopping
+ * early once `endDate` (a yyyy-MM-dd calendar date) is passed. Pure preview helper.
+ */
+export const getUpcomingOccurrences = (
+  nextOccurrence: string,
+  frequency: RecurringFrequency,
+  count: number,
+  endDate?: string | null,
+): string[] => {
+  let date = new Date(nextOccurrence);
+  if (Number.isNaN(date.getTime())) {
+    return [];
+  }
+
+  const end = endDate ? new Date(`${endDate}T12:00:00.000Z`) : null;
+  const occurrences: string[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    if (end && date.getTime() > end.getTime()) {
+      break;
+    }
+    occurrences.push(date.toISOString());
+    date = frequency === "weekly" ? addWeeks(date, 1) : addMonths(date, 1);
+  }
+
+  return occurrences;
+};
+
 export const buildSavingsProgress = (goals: SavingsGoal[]): SavingsGoalProgress[] =>
   goals
     .map((goal) => {

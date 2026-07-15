@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { getNextOccurrence, getRelationSetupError, normalizeRecurringTransaction } from "@/lib/phase3";
+import { getNextOccurrence, getRelationSetupError, getUpcomingOccurrences, normalizeRecurringTransaction } from "@/lib/phase3";
 import { isMissingFunctionError } from "@/lib/planning";
 import { normalizeCategoryName } from "@/lib/transactions";
 import { TRANSACTIONS_QUERY_KEY } from "@/hooks/use-transactions";
@@ -41,6 +41,7 @@ export const useSaveRecurringTransaction = (userId?: string) => {
       description,
       frequency,
       startDate,
+      endDate,
       isActive,
     }: {
       id?: string;
@@ -51,6 +52,7 @@ export const useSaveRecurringTransaction = (userId?: string) => {
       description: string;
       frequency: RecurringFrequency;
       startDate: string;
+      endDate?: string;
       isActive: boolean;
     }) => {
       const payload = {
@@ -62,6 +64,7 @@ export const useSaveRecurringTransaction = (userId?: string) => {
         description: description.trim() || null,
         frequency,
         start_date: startDate,
+        end_date: endDate || null,
         next_occurrence: getNextOccurrence(startDate, frequency),
         is_active: isActive,
       };
@@ -91,6 +94,30 @@ export const useDeleteRecurringTransaction = (userId?: string) => {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("recurring_transactions").delete().eq("id", id).eq("user_id", userId);
 
+      if (error) {
+        throw getRelationSetupError(error, "recurring_transactions", "supabase_phase3_setup.sql");
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [RECURRING_TRANSACTIONS_QUERY_KEY, userId] });
+    },
+  });
+};
+
+export const useSkipRecurringOccurrence = (userId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, nextOccurrence, frequency }: { id: string; nextOccurrence: string; frequency: RecurringFrequency }) => {
+      if (!userId) {
+        throw new Error("You must be signed in.");
+      }
+      const advanced = getUpcomingOccurrences(nextOccurrence, frequency, 2)[1] ?? nextOccurrence;
+      const { error } = await supabase
+        .from("recurring_transactions")
+        .update({ next_occurrence: advanced })
+        .eq("id", id)
+        .eq("user_id", userId);
       if (error) {
         throw getRelationSetupError(error, "recurring_transactions", "supabase_phase3_setup.sql");
       }
